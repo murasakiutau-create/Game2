@@ -1,126 +1,91 @@
-// Save system with anti-tamper protection
+const SaveSystem = {
+    slots: ['game_slot_1', 'game_slot_2', 'game_slot_3'],
 
-class SaveSystem {
-  constructor() {
-    this.slots = ['game_slot_1', 'game_slot_2', 'game_slot_3'];
-  }
+    save(slotNumber) {
+        const slot = this.slots[slotNumber - 1];
+        const data = {
+            materials: GameState.materials,
+            items: GameState.items,
+            completedQuests: GameState.completedQuests,
+            timestamp: new Date().toLocaleString()
+        };
+        const jsonString = JSON.stringify(data);
+        const checksum = CRC32.toHex(CRC32.calculate(jsonString));
+        const saveData = { data: jsonString, checksum: checksum };
+        localStorage.setItem(slot, JSON.stringify(saveData));
+    },
 
-  serializeGameState(state) {
-    return JSON.stringify({
-      currentScreen: state.currentScreen,
-      inventory: state.inventory,
-      completedRequests: state.completedRequests,
-      playerHP: state.playerHP,
-      craftedItems: state.craftedItems
-    });
-  }
+    load(slotNumber) {
+        const slot = this.slots[slotNumber - 1];
+        const saved = localStorage.getItem(slot);
+        if (!saved) return null;
 
-  deserializeGameState(data) {
-    const parsed = JSON.parse(data);
-    gameState.currentScreen = parsed.currentScreen;
-    gameState.inventory = parsed.inventory;
-    gameState.completedRequests = parsed.completedRequests;
-    gameState.playerHP = parsed.playerHP;
-    gameState.craftedItems = parsed.craftedItems;
-  }
+        try {
+            const saveData = JSON.parse(saved);
+            const checksum = CRC32.toHex(CRC32.calculate(saveData.data));
+            if (checksum !== saveData.checksum) {
+                alert('セーブデータが改竄されています！');
+                return null;
+            }
+            const data = JSON.parse(saveData.data);
+            GameState.materials = data.materials;
+            GameState.items = data.items;
+            GameState.completedQuests = data.completedQuests;
+            GameState.save();
+            return data;
+        } catch (e) {
+            alert('セーブデータの読み込みに失敗しました');
+            return null;
+        }
+    },
 
-  saveSlot(slotNumber, state) {
-    if (slotNumber < 1 || slotNumber > 3) return false;
+    getSaveInfo(slotNumber) {
+        const slot = this.slots[slotNumber - 1];
+        const saved = localStorage.getItem(slot);
+        if (!saved) return null;
 
-    const serialized = this.serializeGameState(state);
-    const checksum = CRC32.calculate(serialized);
+        try {
+            const saveData = JSON.parse(saved);
+            const data = JSON.parse(saveData.data);
+            return data.timestamp || '日時不明';
+        } catch {
+            return null;
+        }
+    },
 
-    const saveData = {
-      data: serialized,
-      checksum: checksum,
-      timestamp: new Date().toISOString()
-    };
+    exportData() {
+        const data = {
+            materials: GameState.materials,
+            items: GameState.items,
+            completedQuests: GameState.completedQuests,
+            timestamp: new Date().toLocaleString()
+        };
+        const jsonString = JSON.stringify(data);
+        const checksum = CRC32.toHex(CRC32.calculate(jsonString));
+        const exportData = { data: jsonString, checksum: checksum };
+        const encoded = btoa(JSON.stringify(exportData));
+        return encoded;
+    },
 
-    try {
-      localStorage.setItem(this.slots[slotNumber - 1], JSON.stringify(saveData));
-      return true;
-    } catch (e) {
-      console.error('Save failed:', e);
-      return false;
+    importData(encoded) {
+        try {
+            const decoded = atob(encoded);
+            const importData = JSON.parse(decoded);
+            const checksum = CRC32.toHex(CRC32.calculate(importData.data));
+            if (checksum !== importData.checksum) {
+                alert('インポートデータが改竄されています！');
+                return false;
+            }
+            const data = JSON.parse(importData.data);
+            GameState.materials = data.materials;
+            GameState.items = data.items;
+            GameState.completedQuests = data.completedQuests;
+            GameState.save();
+            alert('インポートが完了しました！');
+            return true;
+        } catch (e) {
+            alert('インポートに失敗しました');
+            return false;
+        }
     }
-  }
-
-  loadSlot(slotNumber, state) {
-    if (slotNumber < 1 || slotNumber > 3) return false;
-
-    try {
-      const saveData = localStorage.getItem(this.slots[slotNumber - 1]);
-      if (!saveData) {
-        return { success: false, error: 'No save in this slot' };
-      }
-
-      const parsed = JSON.parse(saveData);
-      const { data, checksum } = parsed;
-
-      // Verify checksum
-      if (!CRC32.verify(data, checksum)) {
-        return { success: false, error: 'Save data corrupted or tampered' };
-      }
-
-      this.deserializeGameState(data);
-      return { success: true };
-    } catch (e) {
-      return { success: false, error: 'Failed to load save: ' + e.message };
-    }
-  }
-
-  exportSlot(slotNumber) {
-    if (slotNumber < 1 || slotNumber > 3) return null;
-
-    try {
-      const saveData = localStorage.getItem(this.slots[slotNumber - 1]);
-      if (!saveData) return null;
-
-      // Encode to Base64 for easy copy-paste
-      const encoded = btoa(unescape(encodeURIComponent(saveData)));
-      return encoded;
-    } catch (e) {
-      console.error('Export failed:', e);
-      return null;
-    }
-  }
-
-  importSlot(slotNumber, encodedData) {
-    if (slotNumber < 1 || slotNumber > 3) {
-      return { success: false, error: 'Invalid slot number' };
-    }
-
-    try {
-      // Decode from Base64
-      const decoded = decodeURIComponent(escape(atob(encodedData)));
-      const saveData = JSON.parse(decoded);
-      const { data, checksum } = saveData;
-
-      // Verify checksum
-      if (!CRC32.verify(data, checksum)) {
-        return { success: false, error: 'Imported data is corrupted or tampered' };
-      }
-
-      // Save to slot
-      localStorage.setItem(this.slots[slotNumber - 1], decoded);
-      this.deserializeGameState(data);
-
-      return { success: true };
-    } catch (e) {
-      return { success: false, error: 'Invalid save data: ' + e.message };
-    }
-  }
-
-  hasSlot(slotNumber) {
-    if (slotNumber < 1 || slotNumber > 3) return false;
-    return localStorage.getItem(this.slots[slotNumber - 1]) !== null;
-  }
-
-  deleteSlot(slotNumber) {
-    if (slotNumber < 1 || slotNumber > 3) return false;
-    localStorage.removeItem(this.slots[slotNumber - 1]);
-    return true;
-  }
-}
-
-const saveSystem = new SaveSystem();
+};

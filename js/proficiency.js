@@ -1,43 +1,22 @@
-// Proficiency system
+const ProficiencySystem = {
+    useMaterial(materialId) {
+        GameState.increaseProficiency(materialId, 1);
+    },
 
-class ProficiencySystem {
-  getProficiencyLevel(proficiency) {
-    if (proficiency < 20) return 'Novice';
-    if (proficiency < 40) return 'Apprentice';
-    if (proficiency < 60) return 'Journeyman';
-    if (proficiency < 80) return 'Expert';
-    if (proficiency < 100) return 'Master';
-    return 'Legendary';
-  }
+    getProficiencyBonus(materialId) {
+        const prof = GameState.getProficiency(materialId);
+        if (prof < 25) return 1.0;
+        if (prof < 50) return 1.1;
+        if (prof < 75) return 1.2;
+        return 1.3;
+    },
 
-  getProficiencyBonus(proficiency) {
-    return Math.floor(proficiency / 25);
-  }
+    getAttackBonus(materialId) {
+        return this.getProficiencyBonus(materialId);
+    },
 
-  getDisplayProficiency(proficiency) {
-    const level = this.getProficiencyLevel(proficiency);
-    const bonus = this.getProficiencyBonus(proficiency);
-    return `${level} (${proficiency}/100) +${bonus}`;
-  }
-
-  calculateCraftBonus(selectedMaterialIds) {
-    let totalBonus = 0;
-    for (const materialId of selectedMaterialIds) {
-      const inv = gameState.inventory.find(i => i.materialId === materialId);
-      if (inv) {
-        totalBonus += this.getProficiencyBonus(inv.proficiency);
-      }
+    getCraftingQualityBonus(materialId) {
+        const prof = GameState.getProficiency(materialId);
+        return prof / 100;
     }
-    return totalBonus;
-  }
-
-  calculateBattleBonus(materialId) {
-    const inv = gameState.inventory.find(i => i.materialId === materialId);
-    if (inv) {
-      return this.getProficiencyBonus(inv.proficiency);
-    }
-    return 0;
-  }
-}
-
-const proficiencySystem = new ProficiencySystem();
+};

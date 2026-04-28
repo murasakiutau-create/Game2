@@ -1,162 +1,162 @@
-// Master data for the cyberpunk alchemy game
+const GameData = {
+    // 素材マスター
+    materials: [
+        { id: 1, name: '核融合セル', element: '火', quality: '純度', description: 'エネルギー源となる基本素材' },
+        { id: 2, name: 'プラズマコア', element: '火', quality: '純度', description: '高温のプラズマを封閉' },
+        { id: 3, name: 'アイスクリスタル', element: '水', quality: '純度', description: '凍結した深宇宙の氷' },
+        { id: 4, name: 'ニューロジェル', element: '水', quality: '安定', description: 'AI用の神経ジェル' },
+        { id: 5, name: '雷石', element: '雷', quality: '純度', description: '帯電した隕石の破片' },
+        { id: 6, name: 'サイバーチップ', element: '雷', quality: '汚染', description: '古い制御回路' },
+        { id: 7, name: 'ナノペイント', element: '虚', quality: '不安定', description: '存在感の薄い塗料' },
+        { id: 8, name: 'メモリクリスタル', element: '虚', quality: '安定', description: 'データを保存するクリスタル' },
+        { id: 9, name: 'チタニウム合金', element: 'メタル', quality: '純度', description: '高強度のメタル' },
+        { id: 10, name: 'ポリマーフィルム', element: 'メタル', quality: '汚染', description: 'リサイクル素材' }
+    ],
 
-const GAME_DATA = {
-  // Material attributes
-  ELEMENTS: {
-    FIRE: 'fire',
-    WATER: 'water',
-    LIGHTNING: 'lightning',
-    ICE: 'ice',
-    VOID: 'void'
-  },
+    // レシピマスター
+    recipes: [
+        {
+            id: 1,
+            name: '火の鎮静剤',
+            description: '火属性を抑制する調合品',
+            materials: [
+                { materialId: 1, required: true, quantity: 2 },
+                { materialId: 3, required: true, quantity: 1 }
+            ],
+            result: '火の鎮静剤'
+        },
+        {
+            id: 2,
+            name: 'アイスバリア',
+            description: '氷の防壁を展開',
+            materials: [
+                { materialId: 3, required: true, quantity: 2 },
+                { materialId: 4, required: true, quantity: 1 }
+            ],
+            result: 'アイスバリア'
+        },
+        {
+            id: 3,
+            name: 'エネルギー弾',
+            description: '雷属性の攻撃アイテム',
+            materials: [
+                { materialId: 1, required: true, quantity: 1 },
+                { materialId: 5, required: true, quantity: 2 }
+            ],
+            result: 'エネルギー弾'
+        },
+        {
+            id: 4,
+            name: 'スーパーコンピュータ',
+            description: '複雑な計算を行う装置',
+            materials: [
+                { materialId: 6, required: true, quantity: 2 },
+                { materialId: 8, required: true, quantity: 1 },
+                { materialId: 9, required: true, quantity: 1 }
+            ],
+            result: 'スーパーコンピュータ'
+        },
+        {
+            id: 5,
+            name: 'ハイブリッドコア',
+            description: 'あらゆる属性を兼ねた融合素材',
+            materials: [
+                { materialId: 1, required: true, quantity: 1 },
+                { materialId: 3, required: true, quantity: 1 },
+                { materialId: 5, required: true, quantity: 1 },
+                { materialId: 8, required: true, quantity: 1 }
+            ],
+            result: 'ハイブリッドコア'
+        }
+    ],
 
-  QUALITIES: {
-    PURE: 'pure',
-    CONTAMINATED: 'contaminated',
-    STABLE: 'stable',
-    UNSTABLE: 'unstable'
-  },
+    // 敵マスター
+    enemies: [
+        {
+            id: 1,
+            name: 'スコーピオンドローン',
+            hp: 30,
+            attack: 8,
+            dropMaterials: [1, 2, 6]
+        },
+        {
+            id: 2,
+            name: 'フローズンセンチネル',
+            hp: 25,
+            attack: 6,
+            dropMaterials: [3, 4, 10]
+        },
+        {
+            id: 3,
+            name: 'ラッシュプロトタイプ',
+            hp: 35,
+            attack: 10,
+            dropMaterials: [5, 6, 9]
+        },
+        {
+            id: 4,
+            name: 'エコープレイ',
+            hp: 20,
+            attack: 5,
+            dropMaterials: [7, 8, 4]
+        }
+    ],
 
-  // Materials (素材)
-  MATERIALS: [
-    { id: 'fusion-cell', name: 'Nuclear Fusion Cell', element: 'fire', quality: 'pure', desc: '高温プラズマを放つ核融合エネルギー源' },
-    { id: 'cryo-gel', name: 'Cryo-Gel', element: 'ice', quality: 'stable', desc: '極低温凍結ジェル、安定した冷却能力' },
-    { id: 'plasma-core', name: 'Plasma Core', element: 'fire', quality: 'unstable', desc: '不安定なプラズマコア、扱い危険' },
-    { id: 'synth-polymer', name: 'Synthetic Polymer', element: 'void', quality: 'pure', desc: 'ナノ合成ポリマー、多用途素材' },
-    { id: 'neural-fluid', name: 'Neural Fluid', element: 'water', quality: 'contaminated', desc: 'AI脳髄液、汚染されている' },
-    { id: 'titanium-alloy', name: 'Titanium Alloy', element: 'void', quality: 'stable', desc: '高強度チタン合金' },
-    { id: 'nanotech-chip', name: 'Nanotech Chip', element: 'lightning', quality: 'pure', desc: '高度な量子ナノチップ' },
-    { id: 'bioluminous-vial', name: 'Bioluminous Vial', element: 'water', quality: 'pure', desc: '生物発光体を封入したバイアル' },
-    { id: 'corrupted-data-shard', name: 'Corrupted Data Shard', element: 'lightning', quality: 'contaminated', desc: 'ハッキングされたデータシャード' },
-    { id: 'void-catalyst', name: 'Void Catalyst', element: 'void', quality: 'unstable', desc: '虚の触媒、予測不可能な効果' }
-  ],
+    // 依頼マスター
+    quests: [
+        {
+            id: 1,
+            title: 'エネルギー供給',
+            description: 'ステーション内のエネルギーが不足しています。火の鎮静剤を1個用意してください。',
+            requiredItem: '火の鎮静剤',
+            quantity: 1,
+            reward: { materials: [1, 2] }
+        },
+        {
+            id: 2,
+            title: '温度管理',
+            description: '冷却室の温度が上昇しています。アイスバリアを1個提供してください。',
+            requiredItem: 'アイスバリア',
+            quantity: 1,
+            reward: { materials: [3, 4] }
+        },
+        {
+            id: 3,
+            title: 'システム修復',
+            description: 'メインシステムが故障しました。スーパーコンピュータを1個用意してください。',
+            requiredItem: 'スーパーコンピュータ',
+            quantity: 1,
+            reward: { materials: [5, 6, 9] }
+        }
+    ],
 
-  // Recipes (レシピ)
-  RECIPES: [
-    {
-      id: 'nano-blade',
-      name: 'ナノブレード',
-      materials: ['nanotech-chip', 'titanium-alloy', 'fusion-cell'],
-      elementRequirement: 'fire',
-      qualityRequirement: 'pure',
-      product: 'Nano Blade',
-      desc: '切れ味抜群のナノサイズの刃'
+    // 初期素材
+    initialMaterials: {
+        1: { count: 3, proficiency: 0 },
+        2: { count: 2, proficiency: 0 },
+        3: { count: 2, proficiency: 0 },
+        4: { count: 1, proficiency: 0 },
+        5: { count: 2, proficiency: 0 },
+        8: { count: 1, proficiency: 0 }
     },
-    {
-      id: 'cryo-bomb',
-      name: 'クライオボム',
-      materials: ['cryo-gel', 'plasma-core', 'synth-polymer'],
-      elementRequirement: 'ice',
-      qualityRequirement: 'stable',
-      product: 'Cryo Bomb',
-      desc: '極低温爆発を起こす冷却爆弾'
+
+    getMaterialById(id) {
+        return this.materials.find(m => m.id === id);
     },
-    {
-      id: 'neural-virus',
-      name: 'ニューラルウイルス',
-      materials: ['neural-fluid', 'corrupted-data-shard', 'nanotech-chip'],
-      elementRequirement: 'lightning',
-      qualityRequirement: 'contaminated',
-      product: 'Neural Virus',
-      desc: 'AIシステムへの攻撃プログラム'
+
+    getRecipeById(id) {
+        return this.recipes.find(r => r.id === id);
     },
-    {
-      id: 'void-shield',
-      name: 'ボイドシールド',
-      materials: ['void-catalyst', 'titanium-alloy', 'synth-polymer'],
-      elementRequirement: 'void',
-      qualityRequirement: 'pure',
-      product: 'Void Shield',
-      desc: '虚の力で物理攻撃を無効化する盾'
+
+    getEnemyById(id) {
+        return this.enemies.find(e => e.id === id);
     },
-    {
-      id: 'plasma-torch',
-      name: 'プラズマトーチ',
-      materials: ['fusion-cell', 'plasma-core', 'nanotech-chip'],
-      elementRequirement: 'fire',
-      qualityRequirement: 'unstable',
-      product: 'Plasma Torch',
-      desc: '高温プラズマの火炎放射器'
+
+    getQuestById(id) {
+        return this.quests.find(q => q.id === id);
+    },
+
+    getRandomEnemy() {
+        return this.enemies[Math.floor(Math.random() * this.enemies.length)];
     }
-  ],
-
-  // Enemies (敵)
-  ENEMIES: [
-    {
-      id: 'rogue-drone',
-      name: 'Rogue Security Drone',
-      hp: 30,
-      attack: 8,
-      drops: ['synth-polymer', 'titanium-alloy', 'nanotech-chip'],
-      desc: '暴走した警備ドローン'
-    },
-    {
-      id: 'corrupted-ai',
-      name: 'Corrupted AI Unit',
-      hp: 50,
-      attack: 12,
-      drops: ['corrupted-data-shard', 'neural-fluid', 'nanotech-chip'],
-      desc: '破損したAI制御ユニット'
-    },
-    {
-      id: 'void-entity',
-      name: 'Void Entity',
-      hp: 40,
-      attack: 15,
-      drops: ['void-catalyst', 'plasma-core', 'synth-polymer'],
-      desc: '虚の次元から迷い込んだ存在'
-    },
-    {
-      id: 'plasma-mutant',
-      name: 'Plasma Mutant',
-      hp: 35,
-      attack: 11,
-      drops: ['fusion-cell', 'plasma-core', 'bioluminous-vial'],
-      desc: 'プラズマ放射線の被曝者'
-    },
-    {
-      id: 'hades-guard',
-      name: 'Hades Guard Robot',
-      hp: 60,
-      attack: 13,
-      drops: ['titanium-alloy', 'nanotech-chip', 'corrupted-data-shard'],
-      desc: 'ハデス駅舎の警備ロボット'
-    }
-  ],
-
-  // Requests (依頼)
-  REQUESTS: [
-    {
-      id: 'request-1',
-      title: '警備ドローン撃破用武器製造',
-      description: 'ナノブレードを納めてほしい',
-      requiredProduct: 'Nano Blade',
-      reward: { exp: 100, materials: ['fusion-cell', 'synth-polymer'] },
-      completed: false
-    },
-    {
-      id: 'request-2',
-      title: '冷却爆弾製造依頼',
-      description: 'クライオボムを納めてほしい',
-      requiredProduct: 'Cryo Bomb',
-      reward: { exp: 120, materials: ['cryo-gel', 'plasma-core'] },
-      completed: false
-    },
-    {
-      id: 'request-3',
-      title: 'AI破壊プログラム開発',
-      description: 'ニューラルウイルスを納めてほしい',
-      requiredProduct: 'Neural Virus',
-      reward: { exp: 150, materials: ['neural-fluid', 'nanotech-chip'] },
-      completed: false
-    }
-  ],
-
-  // Initial inventory
-  INITIAL_INVENTORY: [
-    { materialId: 'fusion-cell', quantity: 2, proficiency: 0 },
-    { materialId: 'synth-polymer', quantity: 3, proficiency: 0 },
-    { materialId: 'titanium-alloy', quantity: 2, proficiency: 0 },
-    { materialId: 'cryo-gel', quantity: 1, proficiency: 0 }
-  ]
 };

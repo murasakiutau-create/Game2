@@ -1,424 +1,261 @@
-// Main game logic and screen management
-
-function showScreen(screenName) {
-  // Hide all screens
-  document.querySelectorAll('.screen').forEach(screen => {
-    screen.classList.remove('active');
-  });
-
-  // Show selected screen
-  const targetScreen = document.getElementById(screenName + '-screen');
-  if (targetScreen) {
-    targetScreen.classList.add('active');
-    gameState.currentScreen = screenName;
-
-    // Update screen content based on type
-    if (screenName === 'requests') {
-      updateRequestsList();
-    } else if (screenName === 'inventory') {
-      updateInventoryList();
-    } else if (screenName === 'crafting') {
-      updateCraftingScreen();
-    } else if (screenName === 'battle') {
-      updateBattleScreen();
-    } else if (screenName === 'save-load') {
-      updateSaveLoadScreen();
-    }
-  }
-}
-
-function showMessage(text) {
-  const messageBox = document.getElementById('message-box');
-  const messageContent = document.getElementById('message-content');
-  messageContent.textContent = text;
-  messageBox.classList.remove('hidden');
-}
-
-function closeMessage() {
-  const messageBox = document.getElementById('message-box');
-  messageBox.classList.add('hidden');
-}
-
-// Requests Screen
-function updateRequestsList() {
-  const container = document.getElementById('requests-list');
-  container.innerHTML = '';
-
-  GAME_DATA.REQUESTS.forEach(request => {
-    const div = document.createElement('div');
-    div.className = 'request-item';
-    if (gameState.isRequestCompleted(request.id)) {
-      div.classList.add('completed');
-    }
-
-    const html = `
-      <div class="request-title">${request.title}</div>
-      <div class="request-desc">${request.description}</div>
-      <div style="color: #00ff00; font-size: 12px; margin: 8px 0;">
-        Required: ${request.requiredProduct}
-      </div>
-      ${gameState.isRequestCompleted(request.id)
-        ? '<div style="color: #666;">COMPLETED</div>'
-        : `<button class="btn-small" onclick="submitRequest('${request.id}', '${request.requiredProduct}')">[ SUBMIT ]</button>`
-      }
-    `;
-
-    div.innerHTML = html;
-    container.appendChild(div);
-  });
-}
-
-function submitRequest(requestId, requiredProduct) {
-  // Check if player has crafted the required product
-  const hasCrafted = gameState.craftedItems.some(item => item.name === requiredProduct);
-
-  if (!hasCrafted) {
-    showMessage(`You don't have ${requiredProduct}. Craft it first!`);
-    return;
-  }
-
-  if (gameState.completeRequest(requestId)) {
-    showMessage('Request completed! Reward received.');
-    updateRequestsList();
-  } else {
-    showMessage('Request already completed.');
-  }
-}
-
-// Inventory Screen
-function updateInventoryList() {
-  const container = document.getElementById('inventory-list');
-  container.innerHTML = '';
-
-  if (gameState.inventory.length === 0) {
-    container.innerHTML = '<div class="list-item">No materials in inventory</div>';
-  } else {
-    gameState.inventory.forEach(inv => {
-      const material = gameState.getMaterial(inv.materialId);
-      const div = document.createElement('div');
-      div.className = 'list-item';
-
-      const profLevel = proficiencySystem.getDisplayProficiency(inv.proficiency);
-      const html = `
-        <div class="list-item-title">${material.name}</div>
-        <div class="list-item-desc">Quantity: ${inv.quantity}</div>
-        <div class="list-item-desc">Proficiency: ${profLevel}</div>
-        <div class="list-item-desc" style="color: #ffff00;">Element: ${material.element}</div>
-      `;
-
-      div.innerHTML = html;
-      container.appendChild(div);
+function showScreen(screenId) {
+    document.querySelectorAll('.screen').forEach(screen => {
+        screen.classList.remove('active');
     });
-  }
+    document.getElementById(screenId).classList.add('active');
 
-  // Show crafted items
-  const craftedSection = document.getElementById('crafted-items');
-  craftedSection.innerHTML = '<div class="crafted-title">CRAFTED ITEMS</div>';
+    if (screenId === 'screen-quest') {
+        renderQuestList();
+    } else if (screenId === 'screen-crafting') {
+        renderRecipeList();
+    } else if (screenId === 'screen-inventory') {
+        renderInventory();
+    } else if (screenId === 'screen-battle') {
+        if (!BattleSystem.battleActive) {
+            BattleSystem.startBattle();
+        }
+        BattleSystem.updateDisplay();
+    } else if (screenId === 'screen-save') {
+        updateSaveInfo();
+    }
+}
 
-  if (gameState.craftedItems.length === 0) {
-    craftedSection.innerHTML += '<div class="list-item">No crafted items yet</div>';
-  } else {
-    const list = document.createElement('div');
-    gameState.craftedItems.forEach((item, idx) => {
-      const div = document.createElement('div');
-      div.className = 'list-item';
-      div.innerHTML = `
-        <div class="list-item-title">${idx + 1}. ${item.name}</div>
-        <div class="list-item-desc">Quality: ${item.quality}</div>
-      `;
-      list.appendChild(div);
+// 依頼画面
+function renderQuestList() {
+    const questList = document.getElementById('quest-list');
+    questList.innerHTML = '';
+
+    GameData.quests.forEach(quest => {
+        const completed = GameState.isQuestCompleted(quest.id);
+        const itemCount = GameState.getItemCount(quest.requiredItem);
+        const canComplete = itemCount >= quest.quantity;
+
+        const questEl = document.createElement('div');
+        questEl.className = 'quest-item';
+        questEl.innerHTML = `
+            <div class="quest-title">${quest.title}</div>
+            <div class="quest-desc">${quest.description}</div>
+            <div class="quest-status">
+                ${completed ? '[完了]' : `必要: ${quest.requiredItem} x${quest.quantity} (所持: ${itemCount})`}
+            </div>
+            <div class="quest-reward">報酬: 素材 x${quest.reward.materials.length}個</div>
+            ${!completed && canComplete ? `<button class="btn" onclick="completeQuest(${quest.id})">提出</button>` : ''}
+        `;
+        questList.appendChild(questEl);
     });
-    craftedSection.appendChild(list);
-  }
 }
 
-// Crafting Screen
-function updateCraftingScreen() {
-  const recipesList = document.getElementById('recipes-list');
-  const detailsPanel = document.getElementById('crafting-details');
-
-  recipesList.innerHTML = '';
-  detailsPanel.innerHTML = '<div style="color: #00ff00;">Select a recipe</div>';
-
-  GAME_DATA.RECIPES.forEach(recipe => {
-    const div = document.createElement('div');
-    div.className = 'recipe-item';
-    div.innerHTML = `
-      <div class="recipe-name">${recipe.name}</div>
-      <div class="recipe-product">→ ${recipe.product}</div>
-    `;
-    div.onclick = () => showRecipeDetails(recipe);
-    recipesList.appendChild(div);
-  });
-}
-
-function showRecipeDetails(recipe) {
-  const detailsPanel = document.getElementById('crafting-details');
-  detailsPanel.innerHTML = '';
-
-  const div = document.createElement('div');
-  let html = `
-    <div style="color: #ff00ff; font-weight: bold; margin-bottom: 10px;">${recipe.product}</div>
-    <div style="color: #00ff00; font-size: 12px; margin-bottom: 10px;">${recipe.desc}</div>
-    <div style="border-top: 1px solid #00ff00; padding-top: 10px; margin-bottom: 10px;">
-      <div style="color: #ff00ff; margin-bottom: 5px;">Requirements:</div>
-      <div style="color: #00ff00; font-size: 12px;">Element: ${recipe.elementRequirement}</div>
-      <div style="color: #00ff00; font-size: 12px;">Quality: ${recipe.qualityRequirement}</div>
-    </div>
-    <div style="color: #ff00ff; margin-bottom: 5px;">Select Materials:</div>
-    <div class="materials-grid">
-  `;
-
-  recipe.materials.forEach((_, idx) => {
-    const matList = gameState.inventory.map(inv => gameState.getMaterial(inv.materialId))
-      .filter(m => m !== null);
-
-    if (idx === 0) {
-      html += '<div style="grid-column: 1/-1; color: #ffff00; font-size: 11px;">Choose ' + recipe.materials.length + ' materials</div>';
-    }
-
-    html += '<div class="material-checkbox">';
-    html += '<input type="checkbox" id="material-' + idx + '" onchange="updateCraftingDisplay(\'' + recipe.id + '\')">';
-    html += '<label for="material-' + idx + '">Select material</label>';
-    html += '</div>';
-  });
-
-  html += `
-    </div>
-    <button class="btn-small" onclick="executeCraft('${recipe.id}')">[ CRAFT ]</button>
-  `;
-
-  div.innerHTML = html;
-  detailsPanel.appendChild(div);
-
-  // Populate material options
-  const checkboxes = detailsPanel.querySelectorAll('input[type="checkbox"]');
-  const materials = gameState.inventory.map(inv => gameState.getMaterial(inv.materialId));
-
-  checkboxes.forEach((cb, idx) => {
-    const label = cb.nextElementSibling;
-    if (idx < materials.length) {
-      label.textContent = materials[idx].name;
-      cb.dataset.materialId = materials[idx].id;
-    }
-  });
-}
-
-function updateCraftingDisplay(recipeId) {
-  // This can be extended for real-time validation
-}
-
-function executeCraft(recipeId) {
-  const recipe = GAME_DATA.RECIPES.find(r => r.id === recipeId);
-  const detailsPanel = document.getElementById('crafting-details');
-  const checkboxes = detailsPanel.querySelectorAll('input[type="checkbox"]:checked');
-
-  const selectedMaterials = Array.from(checkboxes).map(cb => cb.dataset.materialId);
-
-  const result = craftingSystem.craft(recipeId, selectedMaterials);
-
-  if (result.success) {
-    showMessage(`✓ Crafted ${result.product.name}! (${result.product.quality})`);
-    updateCraftingScreen();
-  } else {
-    showMessage(`✗ Crafting failed: ${result.error}`);
-  }
-}
-
-// Battle Screen
-function updateBattleScreen() {
-  const container = document.getElementById('battle-commands');
-
-  if (!battleSystem.isBattleActive()) {
-    container.innerHTML = '';
-    const enemiesList = document.createElement('div');
-    enemiesList.style.display = 'grid';
-    enemiesList.style.gap = '10px';
-
-    GAME_DATA.ENEMIES.forEach(enemy => {
-      const btn = document.createElement('button');
-      btn.className = 'btn-small';
-      btn.style.width = '100%';
-      btn.textContent = `[ ${enemy.name} - HP: ${enemy.hp} ]`;
-      btn.onclick = () => startBattle(enemy.id);
-      enemiesList.appendChild(btn);
+function completeQuest(questId) {
+    const quest = GameData.getQuestById(questId);
+    GameState.removeItem(quest.requiredItem, quest.quantity);
+    GameState.completeQuest(questId);
+    
+    // 報酬素材を付与
+    quest.reward.materials.forEach(materialId => {
+        GameState.addMaterial(materialId, 1);
     });
 
-    container.appendChild(enemiesList);
-  } else {
-    updateBattleUI();
-  }
+    alert('依頼を完了しました！素材を獲得しました。');
+    renderQuestList();
 }
 
-function startBattle(enemyId) {
-  if (battleSystem.startBattle(enemyId)) {
-    updateBattleUI();
-  }
+// 調合画面
+function renderRecipeList() {
+    const recipeList = document.getElementById('recipe-list');
+    recipeList.innerHTML = '';
+
+    GameData.recipes.forEach(recipe => {
+        const recipeEl = document.createElement('div');
+        recipeEl.className = 'recipe-item';
+        recipeEl.innerHTML = recipe.name;
+        recipeEl.onclick = () => {
+            CraftingSystem.selectRecipe(recipe.id);
+            renderRecipeDetail();
+        };
+        recipeList.appendChild(recipeEl);
+    });
 }
 
-function updateBattleUI() {
-  const enemyInfo = battleSystem.getEnemyInfo();
-  const playerInfo = battleSystem.getPlayerInfo();
-
-  if (!enemyInfo) return;
-
-  // Update enemy name and HP
-  document.getElementById('enemy-name').textContent = enemyInfo.name;
-  const enemyHPPercent = (enemyInfo.hp / enemyInfo.maxHP) * 100;
-  document.getElementById('enemy-hp').innerHTML = `
-    <div class="hp-fill" style="width: ${enemyHPPercent}%;">
-      ${enemyInfo.hp}/${enemyInfo.maxHP}
-    </div>
-  `;
-
-  // Update player HP
-  const playerHPPercent = (playerInfo.hp / playerInfo.maxHP) * 100;
-  document.getElementById('player-hp').innerHTML = `
-    <div class="hp-fill" style="width: ${playerHPPercent}%;">
-      ${playerInfo.hp}/${playerInfo.maxHP}
-    </div>
-  `;
-
-  // Update battle log
-  const battleLog = document.getElementById('battle-log');
-  battleLog.innerHTML = '';
-  gameState.battleLog.slice(-10).forEach(entry => {
-    const div = document.createElement('div');
-    div.className = 'battle-log-entry ' + entry.type;
-    div.textContent = entry.message;
-    battleLog.appendChild(div);
-  });
-  battleLog.scrollTop = battleLog.scrollHeight;
-
-  // Update commands
-  const commands = document.getElementById('battle-commands');
-  if (battleSystem.isBattleActive()) {
-    commands.innerHTML = `
-      <button class="btn-small" onclick="battleAttack()">[ ATTACK ]</button>
-      <button class="btn-small" onclick="battleDefend()">[ DEFEND ]</button>
-      <button class="btn-small" onclick="battleFlee()">[ FLEE ]</button>
-      <button class="btn-small" onclick="battleSkip()">[ WAIT ]</button>
-    `;
-  }
-}
-
-function battleAttack() {
-  const result = battleSystem.playerAttack();
-  if (result.won) {
-    document.getElementById('battle-back-btn').textContent = '[ CONTINUE ]';
-    updateBattleUI();
-  } else {
-    updateBattleUI();
-  }
-}
-
-function battleDefend() {
-  const result = battleSystem.playerDefend();
-  updateBattleUI();
-}
-
-function battleFlee() {
-  const result = battleSystem.playerFlee();
-  if (result.success) {
-    showMessage('Successfully escaped from battle!');
-    setTimeout(() => showScreen('home'), 1500);
-  } else {
-    updateBattleUI();
-  }
-}
-
-function battleSkip() {
-  battleSystem.isPlayerTurn = false;
-  battleSystem.enemyTurn();
-  updateBattleUI();
-}
-
-// Save/Load Screen
-function updateSaveLoadScreen() {
-  for (let i = 1; i <= 3; i++) {
-    const info = document.getElementById(`slot-${i}-info`);
-    if (saveSystem.hasSlot(i)) {
-      info.textContent = 'Slot has data';
-    } else {
-      info.textContent = 'Empty';
+function renderRecipeDetail() {
+    const recipe = CraftingSystem.selectedRecipe;
+    const detail = document.getElementById('recipe-detail');
+    
+    if (!recipe) {
+        detail.innerHTML = '<p>レシピを選択してください</p>';
+        return;
     }
-  }
+
+    let html = `
+        <div class="recipe-detail-item">
+            <div class="recipe-detail-label">レシピ名</div>
+            <div class="recipe-detail-value">${recipe.name}</div>
+        </div>
+        <div class="recipe-detail-item">
+            <div class="recipe-detail-label">説明</div>
+            <div class="recipe-detail-value">${recipe.description}</div>
+        </div>
+        <div class="recipe-detail-item">
+            <div class="recipe-detail-label">必要素材</div>
+    `;
+
+    const selectedMaterials = {};
+    recipe.materials.forEach(req => {
+        const material = GameData.getMaterialById(req.materialId);
+        const count = GameState.getMaterialCount(req.materialId);
+        const options = GameData.materials
+            .filter(m => GameState.getMaterialCount(m.id) >= req.quantity)
+            .map(m => `<option value="${m.id}">${m.name} (所持: ${GameState.getMaterialCount(m.id)})</option>`)
+            .join('');
+        
+        html += `
+            <div class="material-row">
+                <span>${material.name} x${req.quantity}</span>
+                <select id="material-${req.materialId}" class="material-select">
+                    <option value="">選択...</option>
+                    ${options}
+                </select>
+            </div>
+        `;
+    });
+
+    html += `
+        </div>
+        <div class="recipe-detail-item">
+            <div class="recipe-detail-label">生成アイテム</div>
+            <div class="recipe-detail-value">${recipe.result}</div>
+        </div>
+        <button class="craft-button" onclick="executeCraft()">調合実行</button>
+    `;
+
+    detail.innerHTML = html;
 }
 
-function saveToSlot(slotNumber) {
-  const success = saveSystem.saveSlot(slotNumber, gameState);
-  if (success) {
-    showMessage(`Game saved to slot ${slotNumber}`);
-    updateSaveLoadScreen();
-  } else {
-    showMessage('Save failed!');
-  }
+function executeCraft() {
+    const recipe = CraftingSystem.selectedRecipe;
+    const selectedMaterials = {};
+
+    recipe.materials.forEach(req => {
+        const select = document.getElementById(`material-${req.materialId}`);
+        if (select.value) {
+            selectedMaterials[req.materialId] = parseInt(select.value);
+        }
+    });
+
+    if (CraftingSystem.craft(selectedMaterials)) {
+        renderRecipeList();
+        renderRecipeDetail();
+    }
 }
 
-function loadFromSlot(slotNumber) {
-  const result = saveSystem.loadSlot(slotNumber, gameState);
-  if (result.success) {
-    showMessage(`Game loaded from slot ${slotNumber}`);
-    updateSaveLoadScreen();
-    showScreen('home');
-  } else {
-    showMessage(`Load failed: ${result.error}`);
-  }
+// 素材管理画面
+function renderInventory() {
+    const inventory = document.getElementById('inventory-list');
+    inventory.innerHTML = '';
+
+    const materials = GameState.getAllMaterials();
+    
+    if (materials.length === 0) {
+        inventory.innerHTML = '<p>素材がありません</p>';
+        return;
+    }
+
+    materials.forEach(mat => {
+        const material = GameData.getMaterialById(mat.id);
+        const proficiency = GameState.getProficiency(mat.id);
+        const proficiencyPercent = proficiency;
+
+        const itemEl = document.createElement('div');
+        itemEl.className = 'inventory-item';
+        itemEl.innerHTML = `
+            <div class="item-name">${material.name}</div>
+            <div class="item-count">所持: ${mat.count}個</div>
+            <div class="item-proficiency">熟練度: ${proficiency}/100</div>
+            <div class="proficiency-bar">
+                <div class="proficiency-fill" style="width: ${proficiencyPercent}%"></div>
+            </div>
+            <div class="item-attributes">
+                <span class="attribute-tag">属性: ${material.element}</span>
+                <span class="attribute-tag">品質: ${material.quality}</span>
+            </div>
+        `;
+        inventory.appendChild(itemEl);
+    });
+
+    // アイテム欄
+    const itemsHtml = '<hr style="border-color: #FF00FF; margin: 20px 0;"><h3 style="color: #FF00FF; margin: 15px 0;">完成アイテム</h3>';
+    inventory.innerHTML += itemsHtml;
+
+    GameState.items.forEach(item => {
+        const itemEl = document.createElement('div');
+        itemEl.className = 'inventory-item';
+        itemEl.innerHTML = `
+            <div class="item-name">${item.name}</div>
+            <div class="item-count">個数: ${item.count}個</div>
+        `;
+        inventory.appendChild(itemEl);
+    });
 }
 
-function toggleExport(slotNumber) {
-  const exportData = saveSystem.exportSlot(slotNumber);
-  if (!exportData) {
-    showMessage('No data to export');
-    return;
-  }
-
-  const exportSection = document.getElementById('export-section');
-  const exportArea = document.getElementById('export-data');
-  exportArea.textContent = exportData;
-  exportSection.style.display = 'block';
+// バトル画面
+function playerAttack() {
+    BattleSystem.playerAttack();
 }
 
-function closeExport() {
-  document.getElementById('export-section').style.display = 'none';
+function playerDefend() {
+    BattleSystem.playerDefend();
+}
+
+function playerEscape() {
+    BattleSystem.playerEscape();
+}
+
+// セーブ/ロード画面
+function updateSaveInfo() {
+    for (let i = 1; i <= 3; i++) {
+        const info = SaveSystem.getSaveInfo(i);
+        const infoEl = document.getElementById(`slot-${i}-info`);
+        infoEl.textContent = info ? info : '空';
+    }
+}
+
+function quickSave(slotNumber) {
+    SaveSystem.save(slotNumber);
+    alert(`スロット ${slotNumber} にセーブしました`);
+    updateSaveInfo();
+}
+
+function quickLoad(slotNumber) {
+    if (SaveSystem.load(slotNumber)) {
+        alert(`スロット ${slotNumber} からロードしました`);
+        updateSaveInfo();
+    }
+}
+
+function exportCurrentData() {
+    const exported = SaveSystem.exportData();
+    document.getElementById('export-data').value = exported;
 }
 
 function copyToClipboard() {
-  const exportArea = document.getElementById('export-data');
-  exportArea.select();
-  document.execCommand('copy');
-  showMessage('Exported data copied to clipboard!');
+    const textarea = document.getElementById('export-data');
+    textarea.select();
+    document.execCommand('copy');
+    alert('クリップボードにコピーしました');
 }
 
-function importFromText() {
-  const importArea = document.getElementById('import-data');
-  const encodedData = importArea.value.trim();
-
-  if (!encodedData) {
-    showMessage('Paste exported data first');
-    return;
-  }
-
-  // Find an empty slot or ask user
-  let targetSlot = 1;
-  for (let i = 1; i <= 3; i++) {
-    if (!saveSystem.hasSlot(i)) {
-      targetSlot = i;
-      break;
+function importData() {
+    const imported = document.getElementById('import-data').value;
+    if (imported.trim() === '') {
+        alert('データを入力してください');
+        return;
     }
-  }
-
-  const result = saveSystem.importSlot(targetSlot, encodedData);
-  if (result.success) {
-    showMessage(`Data imported to slot ${targetSlot}`);
-    importArea.value = '';
-    updateSaveLoadScreen();
-  } else {
-    showMessage(`Import failed: ${result.error}`);
-  }
+    if (SaveSystem.importData(imported)) {
+        updateSaveInfo();
+    }
 }
 
-// Initialize game
-window.addEventListener('DOMContentLoaded', () => {
-  showScreen('home');
-});
+// ゲーム開始
+window.onload = function() {
+    GameState.init();
+    showScreen('screen-home');
+};

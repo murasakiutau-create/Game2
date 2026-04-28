@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HADES - Cyberpunk Alchemy Crafting Game</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="game-container">
+    <!-- Home Screen -->
+    <div id="home-screen" class="screen active">
+      <div class="screen-title">HADES STATION</div>
+      <div class="screen-subtitle">Cyberpunk Alchemy Crafting</div>
+      <div class="menu-buttons">
+        <button class="btn-main" onclick="showScreen('requests')">[ REQUESTS ]</button>
+        <button class="btn-main" onclick="showScreen('crafting')">[ CRAFTING ]</button>
+        <button class="btn-main" onclick="showScreen('battle')">[ BATTLE ]</button>
+        <button class="btn-main" onclick="showScreen('inventory')">[ INVENTORY ]</button>
+        <button class="btn-main" onclick="showScreen('save-load')">[ SAVE / LOAD ]</button>
+      </div>
+    </div>
+
+    <!-- Requests Screen -->
+    <div id="requests-screen" class="screen">
+      <div class="screen-title">REQUESTS</div>
+      <div id="requests-list" class="content-list"></div>
+      <button class="btn-back" onclick="showScreen('home')">[ BACK ]</button>
+    </div>
+
+    <!-- Crafting Screen -->
+    <div id="crafting-screen" class="screen">
+      <div class="screen-title">CRAFTING SYSTEM</div>
+      <div class="crafting-container">
+        <div id="recipes-list" class="recipes-panel"></div>
+        <div id="crafting-details" class="crafting-panel"></div>
+      </div>
+      <button class="btn-back" onclick="showScreen('home')">[ BACK ]</button>
+    </div>
+
+    <!-- Battle Screen -->
+    <div id="battle-screen" class="screen">
+      <div class="screen-title">BATTLE ARENA</div>
+      <div class="battle-container">
+        <div class="enemy-section">
+          <div id="enemy-name" class="enemy-info"></div>
+          <div id="enemy-hp" class="hp-bar"></div>
+        </div>
+        <div class="player-section">
+          <div class="player-info">Player</div>
+          <div id="player-hp" class="hp-bar"></div>
+        </div>
+        <div id="battle-log" class="battle-log"></div>
+        <div id="battle-commands" class="command-buttons"></div>
+      </div>
+      <button class="btn-back" id="battle-back-btn" onclick="showScreen('home')">[ BACK ]</button>
+    </div>
+
+    <!-- Inventory Screen -->
+    <div id="inventory-screen" class="screen">
+      <div class="screen-title">INVENTORY</div>
+      <div id="inventory-list" class="content-list"></div>
+      <div id="crafted-items" class="crafted-section"></div>
+      <button class="btn-back" onclick="showScreen('home')">[ BACK ]</button>
+    </div>
+
+    <!-- Save/Load Screen -->
+    <div id="save-load-screen" class="screen">
+      <div class="screen-title">SAVE / LOAD</div>
+      <div class="save-load-container">
+        <div class="slot-section">
+          <div id="slot-1" class="save-slot">
+            <div class="slot-title">SLOT 1</div>
+            <div class="slot-info" id="slot-1-info">Empty</div>
+            <button class="btn-small" onclick="saveToSlot(1)">[ SAVE ]</button>
+            <button class="btn-small" onclick="loadFromSlot(1)">[ LOAD ]</button>
+            <button class="btn-small" onclick="toggleExport(1)">[ EXPORT ]</button>
+          </div>
+          <div id="slot-2" class="save-slot">
+            <div class="slot-title">SLOT 2</div>
+            <div class="slot-info" id="slot-2-info">Empty</div>
+            <button class="btn-small" onclick="saveToSlot(2)">[ SAVE ]</button>
+            <button class="btn-small" onclick="loadFromSlot(2)">[ LOAD ]</button>
+            <button class="btn-small" onclick="toggleExport(2)">[ EXPORT ]</button>
+          </div>
+          <div id="slot-3" class="save-slot">
+            <div class="slot-title">SLOT 3</div>
+            <div class="slot-info" id="slot-3-info">Empty</div>
+            <button class="btn-small" onclick="saveToSlot(3)">[ SAVE ]</button>
+            <button class="btn-small" onclick="loadFromSlot(3)">[ LOAD ]</button>
+            <button class="btn-small" onclick="toggleExport(3)">[ EXPORT ]</button>
+          </div>
+        </div>
+
+        <div class="import-export-section">
+          <div class="import-section">
+            <label>IMPORT</label>
+            <textarea id="import-data" placeholder="Paste exported data here..."></textarea>
+            <button class="btn-small" onclick="importFromText()">[ IMPORT ]</button>
+          </div>
+          <div class="export-section" id="export-section" style="display:none;">
+            <label>EXPORT</label>
+            <textarea id="export-data" readonly></textarea>
+            <button class="btn-small" onclick="copyToClipboard()">[ COPY ]</button>
+            <button class="btn-small" onclick="closeExport()">[ CLOSE ]</button>
+          </div>
+        </div>
+      </div>
+      <button class="btn-back" onclick="showScreen('home')">[ BACK ]</button>
+    </div>
+
+    <!-- Message Box -->
+    <div id="message-box" class="message-box hidden">
+      <div id="message-content" class="message-content"></div>
+      <button class="btn-small" onclick="closeMessage()">[ OK ]</button>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="js/crc32.js"></script>
+  <script src="js/data.js"></script>
+  <script src="js/gameState.js"></script>
+  <script src="js/saveSystem.js"></script>
+  <script src="js/crafting.js"></script>
+  <script src="js/battle.js"></script>
+  <script src="js/proficiency.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>

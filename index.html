@@ -1,0 +1,1326 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ファンタジーRPG - 冒険者の書</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+            color: #ecf0f1;
+            min-height: 100vh;
+            padding: 10px;
+        }
+
+        #game-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: rgba(44, 62, 80, 0.95);
+            border: 3px solid #d4af37;
+            border-radius: 10px;
+            padding: 20px;
+            min-height: 90vh;
+            box-shadow: 0 0 30px rgba(0, 0, 0, 0.7);
+        }
+
+        h1 {
+            text-align: center;
+            color: #d4af37;
+            margin-bottom: 20px;
+            font-size: 2.5em;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+        }
+
+        /* Screen Management */
+        .screen {
+            display: none;
+        }
+
+        .screen.active {
+            display: block;
+        }
+
+        /* Base Screen */
+        #base-screen {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .character-panel {
+            background: linear-gradient(135deg, #1a252f 0%, #283646 100%);
+            border: 2px solid #d4af37;
+            border-radius: 8px;
+            padding: 20px;
+        }
+
+        .character-panel h2 {
+            color: #d4af37;
+            margin-bottom: 15px;
+            font-size: 1.5em;
+        }
+
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(212, 175, 55, 0.2);
+        }
+
+        .stat-label {
+            color: #95a5a6;
+            font-weight: bold;
+        }
+
+        .stat-value {
+            color: #d4af37;
+            font-weight: bold;
+        }
+
+        .hp-bar, .mp-bar {
+            width: 100%;
+            height: 20px;
+            background: #0a0e11;
+            border: 1px solid #d4af37;
+            border-radius: 4px;
+            margin: 8px 0;
+            overflow: hidden;
+        }
+
+        .hp-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #e74c3c 0%, #c0392b 100%);
+            transition: width 0.3s ease;
+        }
+
+        .mp-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #3498db 0%, #2980b9 100%);
+            transition: width 0.3s ease;
+        }
+
+        .menu-section {
+            grid-column: 1 / -1;
+        }
+
+        .menu-buttons {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+        }
+
+        button {
+            background: linear-gradient(135deg, #d4af37 0%, #b8941a 100%);
+            border: 2px solid #8b7620;
+            color: #1a1a1a;
+            padding: 15px 20px;
+            font-size: 1.1em;
+            font-weight: bold;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);
+        }
+
+        button:hover {
+            background: linear-gradient(135deg, #e8c547 0%, #d4af37 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(212, 175, 55, 0.4);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        button.secondary {
+            background: linear-gradient(135deg, #34495e 0%, #2c3e50 100%);
+            border: 2px solid #7f8c8d;
+            color: #ecf0f1;
+        }
+
+        button.secondary:hover {
+            background: linear-gradient(135deg, #3d5470 0%, #354a62 100%);
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* Inventory Panel */
+        .inventory-panel {
+            background: linear-gradient(135deg, #1a252f 0%, #283646 100%);
+            border: 2px solid #d4af37;
+            border-radius: 8px;
+            padding: 20px;
+        }
+
+        .inventory-panel h3 {
+            color: #d4af37;
+            margin-bottom: 15px;
+            font-size: 1.2em;
+        }
+
+        .equipment-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .equipment-slot {
+            background: #0a0e11;
+            border: 1px solid #95a5a6;
+            border-radius: 4px;
+            padding: 10px;
+            min-height: 60px;
+        }
+
+        .equipment-slot-label {
+            color: #95a5a6;
+            font-size: 0.9em;
+            margin-bottom: 5px;
+        }
+
+        .equipment-slot-item {
+            color: #d4af37;
+            font-weight: bold;
+            font-size: 0.95em;
+        }
+
+        /* Modal Dialog */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.6);
+            animation: fadeIn 0.3s ease;
+        }
+
+        .modal.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .modal-content {
+            background: linear-gradient(135deg, #1a252f 0%, #283646 100%);
+            border: 3px solid #d4af37;
+            border-radius: 8px;
+            margin: 5% auto;
+            padding: 25px;
+            width: 90%;
+            max-width: 600px;
+            max-height: 80vh;
+            overflow-y: auto;
+            animation: slideDown 0.3s ease;
+        }
+
+        @keyframes slideDown {
+            from {
+                transform: translateY(-100px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #d4af37;
+            padding-bottom: 15px;
+        }
+
+        .modal-header h2 {
+            color: #d4af37;
+            font-size: 1.5em;
+        }
+
+        .close-button {
+            background: none;
+            border: none;
+            color: #d4af37;
+            font-size: 2em;
+            cursor: pointer;
+            padding: 0;
+            width: auto;
+            height: auto;
+            line-height: 1;
+        }
+
+        .close-button:hover {
+            color: #e8c547;
+            transform: none;
+            box-shadow: none;
+        }
+
+        /* Battle Screen */
+        #battle-screen {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .enemy-panel {
+            background: linear-gradient(135deg, #1a252f 0%, #283646 100%);
+            border: 2px solid #d4af37;
+            border-radius: 8px;
+            padding: 20px;
+        }
+
+        .enemy-container {
+            margin-bottom: 15px;
+            padding: 15px;
+            background: #0a0e11;
+            border: 1px solid #e74c3c;
+            border-radius: 6px;
+        }
+
+        .enemy-name {
+            color: #e74c3c;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .action-panel {
+            background: linear-gradient(135deg, #1a252f 0%, #283646 100%);
+            border: 2px solid #d4af37;
+            border-radius: 8px;
+            padding: 20px;
+            grid-column: 1 / -1;
+        }
+
+        .action-buttons {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .battle-log {
+            background: #0a0e11;
+            border: 1px solid #7f8c8d;
+            border-radius: 4px;
+            padding: 15px;
+            max-height: 200px;
+            overflow-y: auto;
+            font-size: 0.95em;
+            line-height: 1.5;
+        }
+
+        .battle-log-entry {
+            margin-bottom: 8px;
+            padding: 5px 0;
+            border-bottom: 1px solid rgba(127, 140, 141, 0.3);
+        }
+
+        .battle-log-entry:last-child {
+            border-bottom: none;
+        }
+
+        .log-damage {
+            color: #e74c3c;
+        }
+
+        .log-heal {
+            color: #2ecc71;
+        }
+
+        .log-buff {
+            color: #3498db;
+        }
+
+        /* Utility Classes */
+        .text-center {
+            text-align: center;
+        }
+
+        .mt-20 {
+            margin-top: 20px;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .scroll-content {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #1a1a1a;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #d4af37;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #e8c547;
+        }
+
+        .info-text {
+            color: #95a5a6;
+            font-size: 0.95em;
+            line-height: 1.6;
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <h1>⚔️ ファンタジーRPG ⚔️</h1>
+
+        <!-- Base Screen -->
+        <div id="base-screen" class="screen active">
+            <div class="character-panel">
+                <h2>👤 キャラクター</h2>
+                <div class="stat-row">
+                    <span class="stat-label">名前:</span>
+                    <span class="stat-value" id="player-name">冒険者</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">レベル:</span>
+                    <span class="stat-value" id="player-level">1</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">経験値:</span>
+                    <span class="stat-value" id="player-exp">0</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">HP</span>
+                    <span class="stat-value" id="player-hp-value">100/100</span>
+                </div>
+                <div class="hp-bar">
+                    <div class="hp-fill" id="player-hp-bar" style="width: 100%"></div>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">MP</span>
+                    <span class="stat-value" id="player-mp-value">50/50</span>
+                </div>
+                <div class="mp-bar">
+                    <div class="mp-fill" id="player-mp-bar" style="width: 100%"></div>
+                </div>
+                <h2 style="margin-top: 20px;">⚙️ ステータス</h2>
+                <div class="stat-row">
+                    <span class="stat-label">攻撃力:</span>
+                    <span class="stat-value" id="player-atk">10</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">魔力:</span>
+                    <span class="stat-value" id="player-mag">10</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">防御:</span>
+                    <span class="stat-value" id="player-def">5</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">魔防:</span>
+                    <span class="stat-value" id="player-mdef">5</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">速度:</span>
+                    <span class="stat-value" id="player-spd">7</span>
+                </div>
+            </div>
+
+            <div class="inventory-panel">
+                <h3>🎒 装備</h3>
+                <div class="equipment-grid">
+                    <div class="equipment-slot">
+                        <div class="equipment-slot-label">武器</div>
+                        <div class="equipment-slot-item" id="equip-weapon">木の棒</div>
+                    </div>
+                    <div class="equipment-slot">
+                        <div class="equipment-slot-label">頭部</div>
+                        <div class="equipment-slot-item" id="equip-head">装備なし</div>
+                    </div>
+                    <div class="equipment-slot">
+                        <div class="equipment-slot-label">胴体</div>
+                        <div class="equipment-slot-item" id="equip-body">装備なし</div>
+                    </div>
+                    <div class="equipment-slot">
+                        <div class="equipment-slot-label">脚部</div>
+                        <div class="equipment-slot-item" id="equip-feet">装備なし</div>
+                    </div>
+                    <div class="equipment-slot">
+                        <div class="equipment-slot-label">アクセ1</div>
+                        <div class="equipment-slot-item" id="equip-acc1">装備なし</div>
+                    </div>
+                    <div class="equipment-slot">
+                        <div class="equipment-slot-label">アクセ2</div>
+                        <div class="equipment-slot-item" id="equip-acc2">装備なし</div>
+                    </div>
+                </div>
+
+                <h3 style="margin-top: 15px;">💰 所持金</h3>
+                <div class="stat-row">
+                    <span class="stat-label">ゴールド:</span>
+                    <span class="stat-value" id="player-gold">1000</span>
+                </div>
+
+                <h3 style="margin-top: 15px;">📊 ステータス異常</h3>
+                <div id="status-conditions" class="info-text">
+                    <span>なし</span>
+                </div>
+            </div>
+
+            <div class="menu-section">
+                <div class="menu-buttons">
+                    <button id="btn-explore">⚔️ ダンジョン探索</button>
+                    <button id="btn-shop">🏪 道具屋</button>
+                    <button id="btn-smithy">🔨 鍛冶屋</button>
+                    <button id="btn-skills">✨ スキル工房</button>
+                    <button id="btn-tavern">🍺 酒場</button>
+                    <button id="btn-inventory">🎒 インベントリ</button>
+                    <button id="btn-save">💾 セーブ</button>
+                    <button id="btn-load">📂 ロード</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Battle Screen -->
+        <div id="battle-screen" class="screen">
+            <div class="enemy-panel">
+                <h2>👹 敵</h2>
+                <div id="enemy-list"></div>
+            </div>
+
+            <div class="character-panel">
+                <h2>👤 プレイヤー</h2>
+                <div class="stat-row">
+                    <span class="stat-label">HP</span>
+                    <span class="stat-value" id="battle-player-hp">100/100</span>
+                </div>
+                <div class="hp-bar">
+                    <div class="hp-fill" id="battle-player-hp-bar" style="width: 100%"></div>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">MP</span>
+                    <span class="stat-value" id="battle-player-mp">50/50</span>
+                </div>
+                <div class="mp-bar">
+                    <div class="mp-fill" id="battle-player-mp-bar" style="width: 100%"></div>
+                </div>
+            </div>
+
+            <div class="action-panel">
+                <h2>⚡ 行動</h2>
+                <div class="action-buttons" id="action-buttons"></div>
+                <h3>📝 戦闘ログ</h3>
+                <div class="battle-log" id="battle-log"></div>
+            </div>
+        </div>
+
+        <!-- Shop Modal -->
+        <div id="shop-modal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>🏪 道具屋</h2>
+                    <button class="close-button" onclick="closeModal('shop-modal')">×</button>
+                </div>
+                <div class="scroll-content" id="shop-items"></div>
+                <button class="secondary" onclick="closeModal('shop-modal')" style="width: 100%; margin-top: 15px;">戻る</button>
+            </div>
+        </div>
+
+        <!-- Smithy Modal -->
+        <div id="smithy-modal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>🔨 鍛冶屋</h2>
+                    <button class="close-button" onclick="closeModal('smithy-modal')">×</button>
+                </div>
+                <div class="info-text">
+                    <p>装備の強化サービスはまだ利用できません。</p>
+                </div>
+                <button class="secondary" onclick="closeModal('smithy-modal')" style="width: 100%; margin-top: 15px;">戻る</button>
+            </div>
+        </div>
+
+        <!-- Skill Workshop Modal -->
+        <div id="workshop-modal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>✨ スキル工房</h2>
+                    <button class="close-button" onclick="closeModal('workshop-modal')">×</button>
+                </div>
+                <div class="scroll-content" id="workshop-skills"></div>
+                <button class="secondary" onclick="closeModal('workshop-modal')" style="width: 100%; margin-top: 15px;">戻る</button>
+            </div>
+        </div>
+
+        <!-- Tavern Modal -->
+        <div id="tavern-modal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>🍺 酒場</h2>
+                    <button class="close-button" onclick="closeModal('tavern-modal')">×</button>
+                </div>
+                <div class="info-text">
+                    <p>「ようこそ、冒険者よ。」</p>
+                    <p style="margin-top: 10px;">店主がニコニコと笑いながら酒を勧めてくる。</p>
+                    <p style="margin-top: 10px;">いつでも帰ってきてくれよ、と暖かく見守られる。</p>
+                </div>
+                <button class="secondary" onclick="closeModal('tavern-modal')" style="width: 100%; margin-top: 15px;">戻る</button>
+            </div>
+        </div>
+
+        <!-- Inventory Modal -->
+        <div id="inventory-modal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>🎒 インベントリ</h2>
+                    <button class="close-button" onclick="closeModal('inventory-modal')">×</button>
+                </div>
+                <div class="scroll-content" id="inventory-items"></div>
+                <button class="secondary" onclick="closeModal('inventory-modal')" style="width: 100%; margin-top: 15px;">戻る</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ==================== Game State ====================
+        const gameState = {
+            player: {
+                name: '冒険者',
+                level: 1,
+                exp: 0,
+                maxHP: 100,
+                currentHP: 100,
+                maxMP: 50,
+                currentMP: 50,
+                baseATK: 10,
+                baseMAG: 10,
+                baseDEF: 5,
+                baseMDEF: 5,
+                baseSPD: 7,
+                gold: 1000,
+                equipment: {
+                    weapon: 0,
+                    head: null,
+                    body: null,
+                    feet: null,
+                    acc1: null,
+                    acc2: null
+                },
+                inventory: [],
+                skills: [],
+                statusConditions: []
+            },
+            battle: {
+                active: false,
+                enemies: [],
+                currentTurn: 0
+            }
+        };
+
+        // ==================== Equipment Database ====================
+        const equipmentDB = {
+            // Weapons
+            0: { name: '木の棒', type: 'weapon', atk: 3, mag: 0, def: 0, mdef: 0, spd: 0, price: 100 },
+            1: { name: '鉄の剣', type: 'weapon', atk: 8, mag: 0, def: 0, mdef: 0, spd: 0, price: 500 },
+            2: { name: 'スチールソード', type: 'weapon', atk: 12, mag: 0, def: 0, mdef: 0, spd: 0, price: 1200 },
+            3: { name: '魔杖', type: 'weapon', atk: 0, mag: 10, def: 0, mdef: 0, spd: 0, price: 600 },
+            4: { name: '竜の杖', type: 'weapon', atk: 0, mag: 15, def: 0, mdef: 0, spd: 0, price: 2000 },
+            5: { name: '聖槍', type: 'weapon', atk: 10, mag: 5, def: 0, mdef: 0, spd: 0, price: 1800 },
+            // Head
+            6: { name: '布の帽子', type: 'head', atk: 0, mag: 0, def: 1, mdef: 2, spd: 0, price: 200 },
+            7: { name: '鉄兜', type: 'head', atk: 0, mag: 0, def: 4, mdef: 0, spd: -1, price: 600 },
+            8: { name: 'ウィザードハット', type: 'head', atk: 0, mag: 2, def: 0, mdef: 4, spd: 0, price: 800 },
+            // Body
+            9: { name: '木綿の服', type: 'body', atk: 0, mag: 0, def: 3, mdef: 1, spd: 0, price: 300 },
+            10: { name: '革の鎧', type: 'body', atk: 0, mag: 0, def: 6, mdef: 2, spd: 0, price: 900 },
+            11: { name: '魔法衣', type: 'body', atk: 0, mag: 3, def: 2, mdef: 5, spd: 0, price: 1200 },
+            12: { name: '重鎧', type: 'body', atk: 0, mag: 0, def: 10, mdef: 0, spd: -2, price: 2000 },
+            // Feet
+            13: { name: '革のブーツ', type: 'feet', atk: 0, mag: 0, def: 1, mdef: 0, spd: 2, price: 250 },
+            14: { name: '鉄甲靴', type: 'feet', atk: 0, mag: 0, def: 2, mdef: 0, spd: 1, price: 400 },
+            15: { name: '魔法靴', type: 'feet', atk: 0, mag: 0, def: 0, mdef: 2, spd: 3, price: 600 },
+            // Accessories
+            16: { name: 'ルビーの指輪', type: 'accessory', atk: 2, mag: 0, def: 0, mdef: 0, spd: 0, price: 300 },
+            17: { name: 'サファイアの指輪', type: 'accessory', atk: 0, mag: 2, def: 0, mdef: 0, spd: 0, price: 300 },
+            18: { name: '防御のお守り', type: 'accessory', atk: 0, mag: 0, def: 2, mdef: 0, spd: 0, price: 350 }
+        };
+
+        // ==================== Skill Database ====================
+        const skillDB = {
+            // Physical attacks
+            0: { name: '斬撃', type: 'attack', desc: '敵に斬りかかる。基本的な物理攻撃。', mpCost: 0, power: 1.2, attr: 'none', target: 'single', runes: [] },
+            1: { name: '連撃', type: 'attack', desc: '敵を2回斬る。', mpCost: 5, power: 0.6, target: 'single', runes: [], isDouble: true, attr: 'none' },
+            2: { name: '全力斬撃', type: 'attack', desc: '敵に全力で斬りかかる。', mpCost: 10, power: 2.0, attr: 'none', target: 'single', runes: [] },
+
+            // Fire skills
+            3: { name: 'ファイアボール', type: 'attack', desc: '敵に炎のボールを放つ。', mpCost: 15, power: 1.5, attr: 'fire', target: 'single', runes: [] },
+            4: { name: 'メラゾーマ', type: 'attack', desc: '強力な炎で敵を燃やす。', mpCost: 25, power: 2.0, attr: 'fire', target: 'single', runes: [] },
+            5: { name: 'ファイアブラスト', type: 'attack', desc: '炎で敵全体を攻撃。', mpCost: 30, power: 1.2, attr: 'fire', target: 'all', runes: [] },
+
+            // Water/Ice skills
+            6: { name: 'アイスボルト', type: 'attack', desc: '敵に氷の矢を放つ。', mpCost: 15, power: 1.5, attr: 'ice', target: 'single', runes: [] },
+            7: { name: 'ブリザード', type: 'attack', desc: '敵全体を凍らせる。', mpCost: 30, power: 1.3, attr: 'ice', target: 'all', runes: [] },
+            8: { name: 'ウォータースペル', type: 'attack', desc: '水流で敵を攻撃。', mpCost: 15, power: 1.5, attr: 'water', target: 'single', runes: [] },
+
+            // Lightning skills
+            9: { name: 'ライトニング', type: 'attack', desc: '敵に雷を落とす。', mpCost: 20, power: 1.6, attr: 'lightning', target: 'single', runes: [] },
+            10: { name: 'チェーンライトニング', type: 'attack', desc: '複数の敵に雷を落とす。', mpCost: 35, power: 1.4, attr: 'lightning', target: 'all', runes: [] },
+
+            // Wind skills
+            11: { name: 'ウィンドブラッシュ', type: 'attack', desc: '敵を風で切り裂く。', mpCost: 12, power: 1.4, attr: 'wind', target: 'single', runes: [] },
+            12: { name: 'トルネード', type: 'attack', desc: '敵全体に風を当てる。', mpCost: 28, power: 1.2, attr: 'wind', target: 'all', runes: [] },
+
+            // Earth skills
+            13: { name: 'ロックスマッシュ', type: 'attack', desc: '敵に岩を落とす。', mpCost: 18, power: 1.6, attr: 'earth', target: 'single', runes: [] },
+
+            // Light/Dark skills
+            14: { name: 'ホーリーライト', type: 'attack', desc: '聖なる光で敵を攻撃。', mpCost: 20, power: 1.6, attr: 'light', target: 'single', runes: [] },
+            15: { name: 'ダークウェーブ', type: 'attack', desc: '暗黒の波で敵を攻撃。', mpCost: 22, power: 1.6, attr: 'dark', target: 'single', runes: [] },
+
+            // Poison/Status skills
+            16: { name: 'ポイズンクラウド', type: 'attack', desc: '毒のクラウドで敵を攻撃。', mpCost: 18, power: 1.2, attr: 'poison', target: 'single', runes: [] },
+
+            // Healing skills
+            17: { name: 'ヒール', type: 'heal', desc: 'HPを回復する。', mpCost: 10, power: 0.8, attr: 'light', target: 'self', runes: [] },
+            18: { name: 'グレートヒール', type: 'heal', desc: 'HPを大幅に回復する。', mpCost: 25, power: 1.3, attr: 'light', target: 'self', runes: [] },
+            19: { name: 'フルリカバリー', type: 'heal', desc: 'HPを完全に回復する。', mpCost: 50, power: 2.0, attr: 'light', target: 'self', runes: [] },
+
+            // Buff skills
+            20: { name: 'ストレングスアップ', type: 'buff', desc: '攻撃力を上げる。', mpCost: 12, duration: 5, attr: 'light', target: 'self', runes: [] },
+            21: { name: 'ディフェンスアップ', type: 'buff', desc: '防御力を上げる。', mpCost: 12, duration: 5, attr: 'light', target: 'self', runes: [] }
+        };
+
+        // ==================== Rune Database ====================
+        const runeDB = [
+            // Power Enhancement (Cumulative)
+            { id: 0, name: '威力+20%', type: 'cumulative', effect: { powerMult: 0.2 }, desc: '威力を20%増加。' },
+            { id: 1, name: '威力+50%', type: 'cumulative', effect: { powerMult: 0.5 }, desc: '威力を50%増加。' },
+            { id: 2, name: 'クリティカル+20%', type: 'cumulative', effect: { critRate: 0.2 }, desc: 'クリティカル率+20%。' },
+
+            // MP Cost Reduction (One-time)
+            { id: 3, name: '消費MP-1', type: 'oneTime', effect: { mpCost: -1 }, desc: '消費MPを1減らす。' },
+            { id: 4, name: '消費MP半減', type: 'oneTime', effect: { mpCostHalf: true }, desc: '消費MPを半分にする。' },
+            { id: 5, name: '無消費', type: 'oneTime', effect: { freeUse: true }, desc: '消費MPを0にするが反動ダメージあり。' },
+
+            // Status Ailments (Cumulative)
+            { id: 6, name: '毒付与', type: 'cumulative', effect: { status: 'poison', rate: 0.3 }, desc: '敵を毒にする確率30%。' },
+            { id: 7, name: '燃焼付与', type: 'cumulative', effect: { status: 'burn', rate: 0.3 }, desc: '敵を燃焼させる確率30%。' },
+            { id: 8, name: '凍結付与', type: 'cumulative', effect: { status: 'freeze', rate: 0.3 }, desc: '敵を凍結させる確率30%。' },
+            { id: 9, name: '麻痺付与', type: 'cumulative', effect: { status: 'paralyze', rate: 0.3 }, desc: '敵を麻痺させる確率30%。' },
+            { id: 10, name: '混乱付与', type: 'cumulative', effect: { status: 'confuse', rate: 0.25 }, desc: '敵を混乱させる確率25%。' },
+            { id: 11, name: '睡眠付与', type: 'cumulative', effect: { status: 'sleep', rate: 0.25 }, desc: '敵を睡眠させる確率25%。' },
+
+            // Additional Effects (Cumulative)
+            { id: 12, name: '命中時に小追撃', type: 'cumulative', effect: { extraAttack: 0.3 }, desc: '命中時に追加攻撃が発動する可能性。' },
+            { id: 13, name: '2回発動', type: 'cumulative', effect: { doubleChance: 0.3 }, desc: '30%の確率で2回発動。' },
+            { id: 14, name: '戦闘後HP回復', type: 'cumulative', effect: { hpRecovery: true }, desc: 'スキル使用後、HPを少し回復。' },
+
+            // Target Modification (Overwrite)
+            { id: 15, name: '全体化', type: 'overwrite', effect: { targetAll: true }, desc: '単体スキルを全体化。威力は半減。' },
+            { id: 16, name: '対象ランダム化', type: 'overwrite', effect: { randomTarget: true }, desc: '対象をランダムに選択。' },
+            { id: 17, name: '自分にも当たる', type: 'cumulative', effect: { selfDamage: true }, desc: 'スキルが自分にも当たる。' },
+
+            // Attribute Modification (Overwrite)
+            { id: 18, name: '属性→火', type: 'overwrite', effect: { attrOverride: 'fire' }, desc: '属性を火に上書き。' },
+            { id: 19, name: '属性→水', type: 'overwrite', effect: { attrOverride: 'water' }, desc: '属性を水に上書き。' },
+            { id: 20, name: '属性→氷', type: 'overwrite', effect: { attrOverride: 'ice' }, desc: '属性を氷に上書き。' },
+            { id: 21, name: '属性→雷', type: 'overwrite', effect: { attrOverride: 'lightning' }, desc: '属性を雷に上書き。' },
+            { id: 22, name: '属性→風', type: 'overwrite', effect: { attrOverride: 'wind' }, desc: '属性を風に上書き。' },
+            { id: 23, name: '属性→光', type: 'overwrite', effect: { attrOverride: 'light' }, desc: '属性を光に上書き。' },
+            { id: 24, name: '属性→闇', type: 'overwrite', effect: { attrOverride: 'dark' }, desc: '属性を闇に上書き。' },
+            { id: 25, name: '二重属性', type: 'cumulative', effect: { dualAttr: true }, desc: '属性を2つ持つようになる。' },
+
+            // Cost Modification
+            { id: 26, name: 'HP消費に変換', type: 'overwrite', effect: { hpCost: true }, desc: 'MP消費をHP消費に変換。' },
+            { id: 27, name: '超威力・反動大', type: 'special', effect: { powerMult: 2.0, recoil: 0.3 }, desc: '威力2倍だが最大HP30%のダメージを反動で受ける。' },
+
+            // Healing Enhancement
+            { id: 28, name: '回復量+30%', type: 'cumulative', effect: { healMult: 0.3 }, desc: '回復量を30%増加。' },
+            { id: 29, name: 'バフ延長', type: 'cumulative', effect: { buffDuration: 2 }, desc: 'バフの持続時間を+2ターン。' },
+
+            // Special Effects
+            { id: 30, name: '使用毎に威力+10%', type: 'special', effect: { cumPowerMult: 0.1 }, desc: 'このスキルを使うたびに威力が累積で10%増加。' },
+            { id: 31, name: '必中', type: 'oneTime', effect: { alwaysHit: true }, desc: '攻撃が必ず命中する。' },
+            { id: 32, name: '外れたら反射', type: 'cumulative', effect: { reflectMiss: true }, desc: '外れた場合、そのダメージが自分に返る。' },
+            { id: 33, name: 'HPが半分以下で発動不可', type: 'cumulative', effect: { lowHPRestrict: true }, desc: 'HPが最大値の半分以下の時は使用不可。' },
+            { id: 34, name: '敵撃破時MP回復', type: 'cumulative', effect: { mpOnKill: 10 }, desc: 'このスキルで敵を倒すたびにMP+10。' },
+            { id: 35, name: '属性無効化', type: 'overwrite', effect: { purePhysical: true }, desc: '属性を完全に無効化し、純粋物理攻撃に。' },
+
+            // Recovery & Defense
+            { id: 36, name: '敵のデバフ1つ解除', type: 'cumulative', effect: { removeDebuff: 1 }, desc: '対象の任意のデバフを1つ解除。' },
+            { id: 37, name: '自分にもバフ適用', type: 'cumulative', effect: { selfBuff: true }, desc: 'バフスキルが自分にも適用される。' },
+            { id: 38, name: '威力と回復を両立', type: 'special', effect: { attackAndHeal: true }, desc: '攻撃スキルが敵にダメージを与えつつ自分を回復。' },
+            { id: 39, name: 'スキル射程+1', type: 'cumulative', effect: { rangeIncrease: 1 }, desc: 'スキルの射程を+1拡張。' }
+        ];
+
+        // ==================== Attribute System ====================
+        const attributes = {
+            'fire': '🔥 火',
+            'water': '💧 水',
+            'ice': '🌊 氷',
+            'lightning': '⚡ 雷',
+            'wind': '🌪 風',
+            'earth': '🌿 土',
+            'light': '✨ 光',
+            'dark': '🌑 闇',
+            'poison': '☠ 毒',
+            'none': '💥 無属性'
+        };
+
+        const attributeWeakness = {
+            'fire': ['ice', 'water'],
+            'water': ['lightning', 'earth'],
+            'ice': ['fire', 'lightning'],
+            'lightning': ['earth'],
+            'wind': [],
+            'earth': ['wind', 'light'],
+            'light': ['dark'],
+            'dark': ['light'],
+            'poison': ['light'],
+            'none': []
+        };
+
+        // ==================== Utility Functions ====================
+        function calculatePlayerStats() {
+            let stats = {
+                atk: gameState.player.baseATK,
+                mag: gameState.player.baseMAG,
+                def: gameState.player.baseDEF,
+                mdef: gameState.player.baseMDEF,
+                spd: gameState.player.baseSPD
+            };
+
+            for (let slot in gameState.player.equipment) {
+                const equipId = gameState.player.equipment[slot];
+                if (equipId !== null && equipmentDB[equipId]) {
+                    const equip = equipmentDB[equipId];
+                    stats.atk += equip.atk;
+                    stats.mag += equip.mag;
+                    stats.def += equip.def;
+                    stats.mdef += equip.mdef;
+                    stats.spd += equip.spd;
+                }
+            }
+
+            return stats;
+        }
+
+        function updatePlayerDisplay() {
+            const stats = calculatePlayerStats();
+            document.getElementById('player-name').textContent = gameState.player.name;
+            document.getElementById('player-level').textContent = gameState.player.level;
+            document.getElementById('player-exp').textContent = gameState.player.exp;
+            document.getElementById('player-hp-value').textContent = `${gameState.player.currentHP}/${gameState.player.maxHP}`;
+            document.getElementById('player-mp-value').textContent = `${gameState.player.currentMP}/${gameState.player.maxMP}`;
+            document.getElementById('player-atk').textContent = stats.atk;
+            document.getElementById('player-mag').textContent = stats.mag;
+            document.getElementById('player-def').textContent = stats.def;
+            document.getElementById('player-mdef').textContent = stats.mdef;
+            document.getElementById('player-spd').textContent = stats.spd;
+            document.getElementById('player-gold').textContent = gameState.player.gold;
+
+            const hpPercent = (gameState.player.currentHP / gameState.player.maxHP) * 100;
+            const mpPercent = (gameState.player.currentMP / gameState.player.maxMP) * 100;
+            document.getElementById('player-hp-bar').style.width = hpPercent + '%';
+            document.getElementById('player-mp-bar').style.width = mpPercent + '%';
+
+            updateEquipmentDisplay();
+            updateStatusDisplay();
+        }
+
+        function updateEquipmentDisplay() {
+            const slots = {
+                'weapon': 'equip-weapon',
+                'head': 'equip-head',
+                'body': 'equip-body',
+                'feet': 'equip-feet',
+                'acc1': 'equip-acc1',
+                'acc2': 'equip-acc2'
+            };
+
+            for (let slot in slots) {
+                const equipId = gameState.player.equipment[slot];
+                const element = document.getElementById(slots[slot]);
+                if (equipId !== null && equipmentDB[equipId]) {
+                    element.textContent = equipmentDB[equipId].name;
+                } else {
+                    element.textContent = '装備なし';
+                }
+            }
+        }
+
+        function updateStatusDisplay() {
+            const conditionElement = document.getElementById('status-conditions');
+            if (gameState.player.statusConditions.length === 0) {
+                conditionElement.textContent = 'なし';
+            } else {
+                const conditionTexts = gameState.player.statusConditions.map(c => {
+                    const names = {
+                        'poison': '毒',
+                        'burn': '燃焼',
+                        'freeze': '凍結',
+                        'paralyze': '麻痺',
+                        'confuse': '混乱',
+                        'sleep': '睡眠'
+                    };
+                    return names[c.type] || c.type;
+                });
+                conditionElement.textContent = conditionTexts.join(', ');
+            }
+        }
+
+        function switchScreen(screenId) {
+            document.querySelectorAll('.screen').forEach(screen => {
+                screen.classList.remove('active');
+            });
+            document.getElementById(screenId).classList.add('active');
+        }
+
+        function openModal(modalId) {
+            document.getElementById(modalId).classList.add('active');
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.remove('active');
+        }
+
+        // ==================== Event Listeners ====================
+        document.getElementById('btn-explore').addEventListener('click', () => {
+            const randomEnemies = [];
+            const enemyCount = Math.floor(Math.random() * 2) + 1;
+            for (let i = 0; i < enemyCount; i++) {
+                randomEnemies.push(Math.floor(Math.random() * 7));
+            }
+            startBattle(randomEnemies);
+        });
+
+        document.getElementById('btn-shop').addEventListener('click', () => {
+            openModal('shop-modal');
+            loadShop();
+        });
+
+        document.getElementById('btn-smithy').addEventListener('click', () => {
+            openModal('smithy-modal');
+        });
+
+        document.getElementById('btn-skills').addEventListener('click', () => {
+            openModal('workshop-modal');
+            loadWorkshop();
+        });
+
+        document.getElementById('btn-tavern').addEventListener('click', () => {
+            openModal('tavern-modal');
+        });
+
+        document.getElementById('btn-inventory').addEventListener('click', () => {
+            openModal('inventory-modal');
+            loadInventory();
+        });
+
+        document.getElementById('btn-save').addEventListener('click', () => {
+            saveGame();
+            alert('ゲームをセーブしました！');
+        });
+
+        document.getElementById('btn-load').addEventListener('click', () => {
+            loadGame();
+            updatePlayerDisplay();
+            alert('ゲームをロードしました！');
+        });
+
+        // ==================== Shop System ====================
+        function loadShop() {
+            const shopContainer = document.getElementById('shop-items');
+            shopContainer.innerHTML = '';
+
+            const shopItems = [
+                { id: 1, type: 'equipment', desc: '攻撃力を大幅に上げる。' },
+                { id: 3, type: 'equipment', desc: '魔力を少し上げる。' },
+                { id: 4, type: 'equipment', desc: '魔力を大幅に上げる。' },
+                { id: 6, type: 'equipment', desc: '魔防を少し上げる。' },
+                { id: 8, type: 'equipment', desc: '魔力と魔防を上げる。' },
+                { id: 13, type: 'equipment', desc: '速度を上げる。' },
+                { id: 15, type: 'equipment', desc: '魔法防御と速度を上げる。' },
+                { id: 16, type: 'equipment', desc: '攻撃力を少し上げる。' }
+            ];
+
+            shopItems.forEach(item => {
+                if (equipmentDB[item.id]) {
+                    const equip = equipmentDB[item.id];
+                    const itemDiv = document.createElement('div');
+                    itemDiv.style.cssText = 'padding: 12px; margin: 10px 0; background: #0a0e11; border: 1px solid #d4af37; border-radius: 4px; cursor: pointer; transition: all 0.3s;';
+                    itemDiv.innerHTML = `
+                        <strong style="color: #d4af37;">${equip.name}</strong><br>
+                        <small style="color: #95a5a6;">${item.desc}</small><br>
+                        <span style="color: #d4af37; font-weight: bold;">価格: ${equip.price}G</span>
+                    `;
+                    itemDiv.addEventListener('mouseenter', () => {
+                        itemDiv.style.backgroundColor = '#1a2a35';
+                        itemDiv.style.borderColor = '#e8c547';
+                    });
+                    itemDiv.addEventListener('mouseleave', () => {
+                        itemDiv.style.backgroundColor = '#0a0e11';
+                        itemDiv.style.borderColor = '#d4af37';
+                    });
+                    itemDiv.addEventListener('click', () => {
+                        if (gameState.player.gold >= equip.price) {
+                            gameState.player.gold -= equip.price;
+                            gameState.player.inventory.push(item.id);
+                            updatePlayerDisplay();
+                            alert(`${equip.name}を購入しました！`);
+                        } else {
+                            alert('ゴールドが不足しています。');
+                        }
+                    });
+                    shopContainer.appendChild(itemDiv);
+                }
+            });
+        }
+
+        // ==================== Skill Workshop ====================
+        function loadWorkshop() {
+            const workshopContainer = document.getElementById('workshop-skills');
+            workshopContainer.innerHTML = '';
+
+            // Show only first 10 skills as examples
+            const skillIds = [0, 1, 2, 3, 4, 5, 14, 17, 18, 20];
+
+            skillIds.forEach(skillId => {
+                const skill = skillDB[skillId];
+                if (skill) {
+                    const skillDiv = document.createElement('div');
+                    skillDiv.style.cssText = 'padding: 15px; margin: 10px 0; background: #0a0e11; border: 1px solid #d4af37; border-radius: 4px; cursor: pointer; transition: all 0.3s;';
+                    const attrStr = attributes[skill.attr] || '無属性';
+                    skillDiv.innerHTML = `
+                        <strong style="color: #d4af37;">${skill.name}</strong><br>
+                        <small style="color: #95a5a6;">${skill.desc}</small><br>
+                        <span style="color: #3498db;">消費MP: ${skill.mpCost}</span> | <span style="color: #f39c12;">属性: ${attrStr}</span>
+                    `;
+                    skillDiv.addEventListener('mouseenter', () => {
+                        skillDiv.style.backgroundColor = '#1a2a35';
+                        skillDiv.style.borderColor = '#e8c547';
+                    });
+                    skillDiv.addEventListener('mouseleave', () => {
+                        skillDiv.style.backgroundColor = '#0a0e11';
+                        skillDiv.style.borderColor = '#d4af37';
+                    });
+                    skillDiv.addEventListener('click', () => {
+                        if (!gameState.player.skills.includes(skillId)) {
+                            gameState.player.skills.push(skillId);
+                            alert(`${skill.name}を習得しました！`);
+                            updatePlayerDisplay();
+                        } else {
+                            alert('すでに習得しています。');
+                        }
+                    });
+                    workshopContainer.appendChild(skillDiv);
+                }
+            });
+        }
+
+        // ==================== Inventory System ====================
+        function loadInventory() {
+            const inventoryContainer = document.getElementById('inventory-items');
+            inventoryContainer.innerHTML = '';
+
+            if (gameState.player.inventory.length === 0) {
+                inventoryContainer.innerHTML = '<p class="info-text">アイテムを持っていません。</p>';
+                return;
+            }
+
+            gameState.player.inventory.forEach((itemId, index) => {
+                const itemDiv = document.createElement('div');
+                itemDiv.style.cssText = 'padding: 10px; margin: 10px 0; background: #0a0e11; border: 1px solid #95a5a6; border-radius: 4px;';
+                const itemData = equipmentDB[itemId];
+                if (itemData) {
+                    itemDiv.innerHTML = `<strong>${itemData.name}</strong><br><small>${itemData.type}</small>`;
+                }
+                inventoryContainer.appendChild(itemDiv);
+            });
+        }
+
+        // ==================== Save/Load System ====================
+        function saveGame() {
+            localStorage.setItem('rpgGameState', JSON.stringify(gameState));
+        }
+
+        function loadGame() {
+            const saved = localStorage.getItem('rpgGameState');
+            if (saved) {
+                Object.assign(gameState, JSON.parse(saved));
+            }
+        }
+
+        // ==================== Enemy Database ====================
+        const enemyDB = [
+            { id: 0, name: 'スライム', maxHP: 15, atk: 3, mag: 1, def: 0, mdef: 0, spd: 2, exp: 10, gold: 25 },
+            { id: 1, name: 'ゴブリン', maxHP: 25, atk: 5, mag: 2, def: 1, mdef: 0, spd: 4, exp: 30, gold: 50 },
+            { id: 2, name: 'オーク', maxHP: 35, atk: 8, mag: 2, def: 2, mdef: 1, spd: 3, exp: 50, gold: 80 },
+            { id: 3, name: 'ドラゴン', maxHP: 100, atk: 15, mag: 12, def: 5, mdef: 5, spd: 8, exp: 300, gold: 500 },
+            { id: 4, name: '火の精霊', maxHP: 30, atk: 6, mag: 10, def: 1, mdef: 3, spd: 7, exp: 60, gold: 100 },
+            { id: 5, name: '氷の魔女', maxHP: 28, atk: 4, mag: 12, def: 2, mdef: 4, spd: 6, exp: 70, gold: 120 },
+            { id: 6, name: 'スケルトン', maxHP: 20, atk: 6, mag: 3, def: 1, mdef: 1, spd: 5, exp: 40, gold: 60 }
+        ];
+
+        // ==================== Enemy Creation ====================
+        function createEnemy(enemyId) {
+            const template = enemyDB[enemyId];
+            if (!template) return null;
+            return {
+                id: enemyId,
+                name: template.name,
+                maxHP: template.maxHP,
+                currentHP: template.maxHP,
+                baseATK: template.atk,
+                baseMAG: template.mag,
+                baseDEF: template.def,
+                baseMDEF: template.mdef,
+                baseSPD: template.spd,
+                exp: template.exp,
+                gold: template.gold,
+                statusConditions: []
+            };
+        }
+
+        // ==================== Attribute System Implementation ====================
+        function getAttributeWeakness(targetAttr, skillAttr) {
+            if (skillAttr === 'none') return 1.0;
+
+            const weaknessChart = {
+                'fire': { 'ice': 2.0, 'water': 2.0 },
+                'water': { 'lightning': 2.0, 'earth': 2.0 },
+                'ice': { 'fire': 2.0, 'lightning': 2.0 },
+                'lightning': { 'earth': 2.0 },
+                'wind': {},
+                'earth': { 'wind': 2.0, 'light': 2.0 },
+                'light': { 'dark': 2.0 },
+                'dark': { 'light': 2.0 },
+                'poison': { 'light': 2.0 },
+                'none': {}
+            };
+
+            const resistanceChart = {
+                'fire': { 'fire': 0.5, 'earth': 0.5 },
+                'water': { 'water': 0.5, 'ice': 0.5 },
+                'ice': { 'ice': 0.5, 'wind': 0.5 },
+                'lightning': { 'lightning': 0.5, 'wind': 0.5 },
+                'wind': { 'wind': 0.5 },
+                'earth': { 'earth': 0.5, 'poison': 0.5 },
+                'light': { 'light': 0.5, 'dark': 0.5 },
+                'dark': { 'dark': 0.5, 'light': 0.5 },
+                'poison': { 'poison': 0.5 },
+                'none': {}
+            };
+
+            if (weaknessChart[targetAttr] && weaknessChart[targetAttr][skillAttr]) {
+                return weaknessChart[targetAttr][skillAttr];
+            }
+            if (resistanceChart[targetAttr] && resistanceChart[targetAttr][skillAttr]) {
+                return resistanceChart[targetAttr][skillAttr];
+            }
+            return 1.0;
+        }
+
+        // ==================== Damage Calculation ====================
+        function calculateDamage(attacker, skill, defender) {
+            let baseDamage = 0;
+
+            if (skill.type === 'attack') {
+                const atkStat = skill.attr === 'none' || !skill.attr ? attacker.baseATK : attacker.baseMAG;
+                const defStat = skill.attr === 'none' || !skill.attr ? defender.baseDEF : defender.baseMDEF;
+                baseDamage = Math.max(1, atkStat - Math.floor(defStat / 2)) * (skill.power || 1.2);
+
+                // Random variance (0.9 - 1.1)
+                baseDamage *= (0.9 + Math.random() * 0.2);
+            }
+
+            // Apply attribute multiplier
+            const attrMult = getAttributeWeakness(defender.attr || 'none', skill.attr || 'none');
+            baseDamage *= attrMult;
+
+            return Math.floor(Math.max(1, baseDamage));
+        }
+
+        // ==================== Battle System Core ====================
+        function startBattle(enemyIds = [0, 1]) {
+            gameState.battle.active = true;
+            gameState.battle.enemies = enemyIds.map(id => createEnemy(id));
+            gameState.battle.currentTurn = 0;
+            gameState.battle.log = [];
+
+            switchScreen('battle-screen');
+            updateBattleDisplay();
+            updateBattleActions();
+        }
+
+        function updateBattleDisplay() {
+            const enemyList = document.getElementById('enemy-list');
+            enemyList.innerHTML = '';
+
+            gameState.battle.enemies.forEach((enemy, index) => {
+                const enemyDiv = document.createElement('div');
+                enemyDiv.className = 'enemy-container';
+                const hpPercent = (enemy.currentHP / enemy.maxHP) * 100;
+                enemyDiv.innerHTML = `
+                    <div class="enemy-name">${enemy.name} #${index + 1}</div>
+                    <div style="margin: 5px 0;">
+                        <div class="hp-bar" style="margin: 5px 0;">
+                            <div class="hp-fill" style="width: ${hpPercent}%"></div>
+                        </div>
+                        <small style="color: #95a5a6;">HP: ${enemy.currentHP}/${enemy.maxHP}</small>
+                    </div>
+                `;
+                enemyList.appendChild(enemyDiv);
+            });
+
+            document.getElementById('battle-player-hp').textContent = `${gameState.player.currentHP}/${gameState.player.maxHP}`;
+            document.getElementById('battle-player-mp').textContent = `${gameState.player.currentMP}/${gameState.player.maxMP}`;
+            const playerHPPercent = (gameState.player.currentHP / gameState.player.maxHP) * 100;
+            const playerMPPercent = (gameState.player.currentMP / gameState.player.maxMP) * 100;
+            document.getElementById('battle-player-hp-bar').style.width = playerHPPercent + '%';
+            document.getElementById('battle-player-mp-bar').style.width = playerMPPercent + '%';
+        }
+
+        function updateBattleActions() {
+            const actionButtons = document.getElementById('action-buttons');
+            actionButtons.innerHTML = '';
+
+            const skills = gameState.player.skills.length > 0 ? gameState.player.skills : [0, 1, 2];
+
+            skills.forEach(skillId => {
+                const skill = skillDB[skillId];
+                if (skill) {
+                    const button = document.createElement('button');
+                    button.textContent = `${skill.name} (MP: ${skill.mpCost})`;
+                    button.addEventListener('click', () => {
+                        executePlayerAction(skillId);
+                    });
+                    actionButtons.appendChild(button);
+                }
+            });
+
+            const defendButton = document.createElement('button');
+            defendButton.textContent = '防御';
+            defendButton.className = 'secondary';
+            defendButton.addEventListener('click', () => {
+                executeBattleRound('defend');
+            });
+            actionButtons.appendChild(defendButton);
+        }
+
+        function executePlayerAction(skillId) {
+            const skill = skillDB[skillId];
+            if (!skill) return;
+
+            if (gameState.player.currentMP < skill.mpCost) {
+                addBattleLog('MPが不足している！');
+                return;
+            }
+
+            gameState.player.currentMP -= skill.mpCost;
+
+            if (skill.type === 'attack') {
+                const targetIndex = Math.floor(Math.random() * gameState.battle.enemies.length);
+                const damage = calculateDamage(gameState.player, skill, gameState.battle.enemies[targetIndex]);
+                gameState.battle.enemies[targetIndex].currentHP -= damage;
+                addBattleLog(`${gameState.player.name}は${skill.name}を使った！${gameState.battle.enemies[targetIndex].name}に${damage}ダメージ！`);
+
+                if (gameState.battle.enemies[targetIndex].currentHP <= 0) {
+                    gameState.battle.enemies[targetIndex].currentHP = 0;
+                    addBattleLog(`${gameState.battle.enemies[targetIndex].name}を倒した！`);
+                    gameState.player.gold += gameState.battle.enemies[targetIndex].gold;
+                    gameState.player.exp += gameState.battle.enemies[targetIndex].exp;
+                }
+            } else if (skill.type === 'heal') {
+                const healAmount = Math.floor(gameState.player.maxHP * (skill.power || 0.8));
+                gameState.player.currentHP = Math.min(gameState.player.maxHP, gameState.player.currentHP + healAmount);
+                addBattleLog(`${skill.name}を使った！${healAmount}回復した！`);
+            }
+
+            executeBattleRound('player-acted');
+        }
+
+        function executeBattleRound(playerAction) {
+            // Remove defeated enemies
+            gameState.battle.enemies = gameState.battle.enemies.filter(e => e.currentHP > 0);
+
+            // Check win condition
+            if (gameState.battle.enemies.length === 0) {
+                endBattle(true);
+                return;
+            }
+
+            // Enemy turn
+            gameState.battle.enemies.forEach(enemy => {
+                const damage = Math.floor(enemy.baseATK * (0.8 + Math.random() * 0.4));
+                gameState.player.currentHP -= damage;
+                addBattleLog(`${enemy.name}の攻撃！${gameState.player.name}は${damage}ダメージを受けた！`);
+            });
+
+            // Check lose condition
+            if (gameState.player.currentHP <= 0) {
+                gameState.player.currentHP = 0;
+                endBattle(false);
+                return;
+            }
+
+            updateBattleDisplay();
+        }
+
+        function endBattle(victory) {
+            gameState.battle.active = false;
+            if (victory) {
+                addBattleLog('===== 勝利！ =====');
+                alert('敵を倒した！\n獲得ゴールド: ' + gameState.player.gold + '\n獲得経験値: ' + gameState.player.exp);
+            } else {
+                addBattleLog('===== 敗北 =====');
+                gameState.player.currentHP = gameState.player.maxHP;
+                gameState.player.currentMP = gameState.player.maxMP;
+                alert('倒されてしまった...拠点に戻った。');
+            }
+            switchScreen('base-screen');
+            updatePlayerDisplay();
+        }
+
+        function addBattleLog(message) {
+            const battleLog = document.getElementById('battle-log');
+            const entry = document.createElement('div');
+            entry.className = 'battle-log-entry';
+            entry.textContent = message;
+            battleLog.appendChild(entry);
+            battleLog.scrollTop = battleLog.scrollHeight;
+        }
+
+        // ==================== Test Battle (for debugging) ====================
+        function testBattle() {
+            startBattle([0, 1]);
+        }
+
+        // ==================== Initialization ====================
+        updatePlayerDisplay();
+    </script>
+</body>
+</html>

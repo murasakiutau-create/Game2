@@ -584,9 +584,19 @@
                     <button class="close-button" onclick="closeModal('tavern-modal')">×</button>
                 </div>
                 <div class="info-text">
-                    <p>「ようこそ、冒険者よ。」</p>
-                    <p style="margin-top: 10px;">店主がニコニコと笑いながら酒を勧めてくる。</p>
-                    <p style="margin-top: 10px;">いつでも帰ってきてくれよ、と暖かく見守られる。</p>
+                    <p><strong style="color: #d4af37;">「ようこそ、冒険者よ。」</strong></p>
+                    <p style="margin-top: 15px;">店主がニコニコと笑いながら酒を勧めてくる。</p>
+
+                    <p style="margin-top: 20px; border-top: 1px solid #d4af37; padding-top: 15px;"><strong style="color: #d4af37;">⚔️ ゲームの説明</strong></p>
+                    <p style="margin-top: 10px; font-size: 0.95em;">
+                        <strong>ダンジョン探索:</strong> 敵と戦ってゴールドと経験値を稼ぐ。レベルが上がるとステータスが上昇。<br><br>
+                        <strong>スキル習得:</strong> スキル工房でスキルを習得し、バトルで使用する。<br><br>
+                        <strong>装備管理:</strong> インベントリで装備を切り替えてステータスを強化。<br><br>
+                        <strong>ルーン:</strong> 敵のドロップやダンジョンで手に入る。ルーン管理で確認可能。<br><br>
+                        <strong>属性:</strong> スキルと敵は属性を持つ。弱点で2倍、耐性で0.5倍のダメージになる。
+                    </p>
+
+                    <p style="margin-top: 15px; border-top: 1px solid #d4af37; padding-top: 15px;">いつでも帰ってきてくれよ、と暖かく見守られる。</p>
                 </div>
                 <button class="secondary" onclick="closeModal('tavern-modal')" style="width: 100%; margin-top: 15px;">戻る</button>
             </div>
@@ -1514,7 +1524,27 @@
             gameState.battle.active = false;
             if (victory) {
                 addBattleLog('===== 勝利！ =====');
-                alert('敵を倒した！\n獲得ゴールド: ' + gameState.player.gold + '\n獲得経験値: ' + gameState.player.exp);
+
+                // Check for level up
+                const expToLevel = 100 * gameState.player.level;
+                let levelUpMessage = `敵を倒した！\n獲得ゴールド: ${gameState.player.gold}\n獲得経験値: ${gameState.player.exp}`;
+
+                if (gameState.player.exp >= expToLevel) {
+                    gameState.player.level++;
+                    gameState.player.exp = 0;
+                    gameState.player.maxHP += 20;
+                    gameState.player.maxMP += 10;
+                    gameState.player.currentHP = gameState.player.maxHP;
+                    gameState.player.currentMP = gameState.player.maxMP;
+                    gameState.player.baseATK += 3;
+                    gameState.player.baseMAG += 3;
+                    gameState.player.baseDEF += 1;
+                    gameState.player.baseMDEF += 1;
+                    levelUpMessage += `\n\n🎉 レベルアップ！現在Lv${gameState.player.level}`;
+                    addBattleLog(`🎉 レベルアップ！Lv${gameState.player.level}になった！`);
+                }
+
+                alert(levelUpMessage);
             } else {
                 addBattleLog('===== 敗北 =====');
                 gameState.player.currentHP = gameState.player.maxHP;

@@ -1008,6 +1008,9 @@
             const shopContainer = document.getElementById('shop-items');
             shopContainer.innerHTML = '';
 
+            // Split into buy and sell sections
+            shopContainer.innerHTML = '<h3 style="color: #d4af37;">購入</h3>';
+
             const shopItems = [
                 { id: 1, type: 'equipment', desc: '攻撃力を大幅に上げる。' },
                 { id: 3, type: 'equipment', desc: '魔力を少し上げる。' },
@@ -1023,11 +1026,16 @@
                 if (equipmentDB[item.id]) {
                     const equip = equipmentDB[item.id];
                     const itemDiv = document.createElement('div');
-                    itemDiv.style.cssText = 'padding: 12px; margin: 10px 0; background: #0a0e11; border: 1px solid #d4af37; border-radius: 4px; cursor: pointer; transition: all 0.3s;';
+                    itemDiv.style.cssText = 'padding: 12px; margin: 10px 0; background: #0a0e11; border: 1px solid #d4af37; border-radius: 4px; cursor: pointer; transition: all 0.3s; display: flex; justify-content: space-between; align-items: center;';
                     itemDiv.innerHTML = `
-                        <strong style="color: #d4af37;">${equip.name}</strong><br>
-                        <small style="color: #95a5a6;">${item.desc}</small><br>
-                        <span style="color: #d4af37; font-weight: bold;">価格: ${equip.price}G</span>
+                        <div>
+                            <strong style="color: #d4af37;">${equip.name}</strong><br>
+                            <small style="color: #95a5a6;">${item.desc}</small>
+                        </div>
+                        <div style="text-align: right;">
+                            <span style="color: #d4af37; font-weight: bold;">${equip.price}G</span><br>
+                            <small style="color: #3498db;">購入</small>
+                        </div>
                     `;
                     itemDiv.addEventListener('mouseenter', () => {
                         itemDiv.style.backgroundColor = '#1a2a35';
@@ -1050,6 +1058,43 @@
                     shopContainer.appendChild(itemDiv);
                 }
             });
+
+            // Sell section
+            if (gameState.player.inventory.length > 0) {
+                shopContainer.innerHTML += '<h3 style="color: #d4af37; margin-top: 20px;">販売</h3>';
+                gameState.player.inventory.forEach((itemId, index) => {
+                    const item = equipmentDB[itemId];
+                    if (item) {
+                        const itemDiv = document.createElement('div');
+                        itemDiv.style.cssText = 'padding: 12px; margin: 10px 0; background: #0a0e11; border: 1px solid #95a5a6; border-radius: 4px; cursor: pointer; transition: all 0.3s; display: flex; justify-content: space-between; align-items: center;';
+                        const sellPrice = Math.floor(item.price * 0.5);
+                        itemDiv.innerHTML = `
+                            <div>
+                                <strong style="color: #95a5a6;">${item.name}</strong>
+                            </div>
+                            <div style="text-align: right;">
+                                <span style="color: #d4af37; font-weight: bold;">${sellPrice}G</span><br>
+                                <small style="color: #3498db;">売却</small>
+                            </div>
+                        `;
+                        itemDiv.addEventListener('mouseenter', () => {
+                            itemDiv.style.backgroundColor = '#1a2a35';
+                            itemDiv.style.borderColor = '#e8c547';
+                        });
+                        itemDiv.addEventListener('mouseleave', () => {
+                            itemDiv.style.backgroundColor = '#0a0e11';
+                            itemDiv.style.borderColor = '#95a5a6';
+                        });
+                        itemDiv.addEventListener('click', () => {
+                            gameState.player.gold += sellPrice;
+                            gameState.player.inventory.splice(index, 1);
+                            updatePlayerDisplay();
+                            loadShop();
+                        });
+                        shopContainer.appendChild(itemDiv);
+                    }
+                });
+            }
         }
 
         // ==================== Skill Workshop ====================
@@ -1399,11 +1444,20 @@
                 return;
             }
 
+            // Apply status conditions to player
+            applyStatusConditionsDamage('player');
+
             // Enemy turn
             gameState.battle.enemies.forEach(enemy => {
-                const damage = Math.floor(enemy.baseATK * (0.8 + Math.random() * 0.4));
-                gameState.player.currentHP -= damage;
-                addBattleLog(`${enemy.name}の攻撃！${gameState.player.name}は${damage}ダメージを受けた！`);
+                // Apply status conditions to enemies
+                applyStatusConditionsDamage('enemy', enemy);
+
+                // Check if enemy can act (not paralyzed, etc)
+                if (canAct(enemy)) {
+                    const damage = Math.floor(enemy.baseATK * (0.8 + Math.random() * 0.4));
+                    gameState.player.currentHP -= damage;
+                    addBattleLog(`${enemy.name}の攻撃！${gameState.player.name}は${damage}ダメージを受けた！`);
+                }
             });
 
             // Check lose condition
@@ -1414,6 +1468,46 @@
             }
 
             updateBattleDisplay();
+        }
+
+        function applyStatusConditionsDamage(target, entity = null) {
+            const actor = target === 'player' ? gameState.player : entity;
+            if (!actor || !actor.statusConditions) return;
+
+            actor.statusConditions.forEach(condition => {
+                switch (condition.type) {
+                    case 'poison':
+                        const poisonDamage = Math.floor(actor.maxHP * 0.05);
+                        actor.currentHP -= poisonDamage;
+                        if (target === 'player') {
+                            addBattleLog(`毒のダメージ！${poisonDamage}ダメージ。`);
+                        }
+                        break;
+                    case 'burn':
+                        const burnDamage = Math.floor(actor.maxHP * 0.07);
+                        actor.currentHP -= burnDamage;
+                        if (target === 'player') {
+                            addBattleLog(`燃焼のダメージ！${burnDamage}ダメージ。`);
+                        }
+                        break;
+                }
+                condition.duration--;
+            });
+
+            actor.statusConditions = actor.statusConditions.filter(c => c.duration > 0);
+        }
+
+        function canAct(actor) {
+            if (!actor.statusConditions) return true;
+            for (let cond of actor.statusConditions) {
+                if (cond.type === 'paralyze' && Math.random() < 0.3) {
+                    return false;
+                }
+                if (cond.type === 'sleep') {
+                    return false;
+                }
+            }
+            return true;
         }
 
         function endBattle(victory) {

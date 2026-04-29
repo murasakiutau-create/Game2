@@ -501,6 +501,7 @@
                     <button id="btn-runes">💎 ルーン</button>
                     <button id="btn-save">💾 セーブ</button>
                     <button id="btn-load">📂 ロード</button>
+                    <button id="btn-reset" class="secondary">🔄 新規ゲーム</button>
                 </div>
             </div>
         </div>
@@ -689,14 +690,16 @@
                     acc1: null,
                     acc2: null
                 },
-                inventory: [],
-                skills: [],
+                inventory: [1, 3],  // Start with some equipment
+                skills: [0, 2, 3],  // Start with basic skills
+                runes: [],
                 statusConditions: []
             },
             battle: {
                 active: false,
                 enemies: [],
-                currentTurn: 0
+                currentTurn: 0,
+                log: []
             }
         };
 
@@ -1014,6 +1017,13 @@
         document.getElementById('btn-runes').addEventListener('click', () => {
             openModal('rune-modal');
             loadRuneList();
+        });
+
+        document.getElementById('btn-reset').addEventListener('click', () => {
+            if (confirm('新規ゲームを始めますか？今までのデータは失われます。')) {
+                localStorage.removeItem('rpgGameState');
+                location.reload();
+            }
         });
 
         // ==================== Shop System ====================

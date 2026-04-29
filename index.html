@@ -602,6 +602,42 @@
                 <button class="secondary" onclick="closeModal('inventory-modal')" style="width: 100%; margin-top: 15px;">戻る</button>
             </div>
         </div>
+
+        <!-- Dungeon Exploration Screen -->
+        <div id="dungeon-screen" class="screen">
+            <div style="max-width: 800px; margin: 0 auto;">
+                <h2 style="text-align: center; color: #d4af37; margin-bottom: 30px;">⚔️ ダンジョン探索 ⚔️</h2>
+
+                <div style="background: linear-gradient(135deg, #1a252f 0%, #283646 100%); border: 2px solid #d4af37; border-radius: 8px; padding: 30px; text-align: center;">
+                    <h3 id="dungeon-message" style="color: #d4af37; font-size: 1.3em; margin-bottom: 20px;">暗い通路が続いている...</h3>
+
+                    <div id="dungeon-content" style="margin: 20px 0;">
+                        <!-- Content will be dynamically generated -->
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; margin-top: 20px;">
+                        <button id="btn-dungeon-explore" style="min-height: 60px;">🔦 奥へ進む</button>
+                        <button id="btn-dungeon-search" style="min-height: 60px;">🔍 探索する</button>
+                        <button id="btn-dungeon-rest" style="min-height: 60px;">💤 休む</button>
+                        <button id="btn-dungeon-retreat" class="secondary" style="min-height: 60px;">🏃 拠点に戻る</button>
+                    </div>
+                </div>
+
+                <div style="background: linear-gradient(135deg, #1a252f 0%, #283646 100%); border: 2px solid #7f8c8d; border-radius: 8px; padding: 20px; margin-top: 20px;">
+                    <h3 style="color: #95a5a6; margin-bottom: 15px;">ステータス</h3>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                        <div>
+                            <div style="color: #95a5a6; font-size: 0.9em;">HP</div>
+                            <div style="color: #d4af37; font-weight: bold;" id="dungeon-hp">100/100</div>
+                        </div>
+                        <div>
+                            <div style="color: #95a5a6; font-size: 0.9em;">MP</div>
+                            <div style="color: #d4af37; font-weight: bold;" id="dungeon-mp">50/50</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script>
@@ -909,12 +945,9 @@
 
         // ==================== Event Listeners ====================
         document.getElementById('btn-explore').addEventListener('click', () => {
-            const randomEnemies = [];
-            const enemyCount = Math.floor(Math.random() * 2) + 1;
-            for (let i = 0; i < enemyCount; i++) {
-                randomEnemies.push(Math.floor(Math.random() * 7));
-            }
-            startBattle(randomEnemies);
+            switchScreen('dungeon-screen');
+            updateDungeonDisplay();
+            setupDungeonButtons();
         });
 
         document.getElementById('btn-shop').addEventListener('click', () => {
@@ -1005,19 +1038,28 @@
             const workshopContainer = document.getElementById('workshop-skills');
             workshopContainer.innerHTML = '';
 
-            // Show only first 10 skills as examples
-            const skillIds = [0, 1, 2, 3, 4, 5, 14, 17, 18, 20];
+            // Show only first 15 skills as examples
+            const skillIds = [0, 1, 2, 3, 4, 5, 9, 14, 15, 17, 18, 19, 20, 21];
+
+            workshopContainer.innerHTML = '<h3 style="color: #d4af37; margin-bottom: 15px;">利用可能なスキル</h3>';
 
             skillIds.forEach(skillId => {
                 const skill = skillDB[skillId];
                 if (skill) {
                     const skillDiv = document.createElement('div');
-                    skillDiv.style.cssText = 'padding: 15px; margin: 10px 0; background: #0a0e11; border: 1px solid #d4af37; border-radius: 4px; cursor: pointer; transition: all 0.3s;';
+                    skillDiv.style.cssText = 'padding: 12px; margin: 10px 0; background: #0a0e11; border: 1px solid #d4af37; border-radius: 4px; cursor: pointer; transition: all 0.3s;';
                     const attrStr = attributes[skill.attr] || '無属性';
+                    const isLearned = gameState.player.skills.includes(skillId);
+                    const statusText = isLearned ? '✓ 習得済み' : 'クリックで習得';
                     skillDiv.innerHTML = `
-                        <strong style="color: #d4af37;">${skill.name}</strong><br>
-                        <small style="color: #95a5a6;">${skill.desc}</small><br>
-                        <span style="color: #3498db;">消費MP: ${skill.mpCost}</span> | <span style="color: #f39c12;">属性: ${attrStr}</span>
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <strong style="color: #d4af37;">${skill.name}</strong><br>
+                                <small style="color: #95a5a6;">${skill.desc}</small><br>
+                                <span style="color: #3498db;">消費MP: ${skill.mpCost}</span> | <span style="color: #f39c12;">属性: ${attrStr}</span>
+                            </div>
+                            <div style="color: ${isLearned ? '#2ecc71' : '#95a5a6'}; font-size: 0.9em;">${statusText}</div>
+                        </div>
                     `;
                     skillDiv.addEventListener('mouseenter', () => {
                         skillDiv.style.backgroundColor = '#1a2a35';
@@ -1031,7 +1073,7 @@
                         if (!gameState.player.skills.includes(skillId)) {
                             gameState.player.skills.push(skillId);
                             alert(`${skill.name}を習得しました！`);
-                            updatePlayerDisplay();
+                            loadWorkshop();
                         } else {
                             alert('すでに習得しています。');
                         }
@@ -1052,14 +1094,74 @@
             }
 
             gameState.player.inventory.forEach((itemId, index) => {
-                const itemDiv = document.createElement('div');
-                itemDiv.style.cssText = 'padding: 10px; margin: 10px 0; background: #0a0e11; border: 1px solid #95a5a6; border-radius: 4px;';
                 const itemData = equipmentDB[itemId];
                 if (itemData) {
-                    itemDiv.innerHTML = `<strong>${itemData.name}</strong><br><small>${itemData.type}</small>`;
+                    const itemDiv = document.createElement('div');
+                    itemDiv.style.cssText = 'padding: 12px; margin: 10px 0; background: #0a0e11; border: 1px solid #d4af37; border-radius: 4px; cursor: pointer; transition: all 0.3s;';
+                    const typeLabel = {
+                        'weapon': '武器',
+                        'head': '頭部',
+                        'body': '胴体',
+                        'feet': '脚部',
+                        'accessory': 'アクセサリ'
+                    };
+                    const stats = [];
+                    if (itemData.atk > 0) stats.push(`攻撃+${itemData.atk}`);
+                    if (itemData.mag > 0) stats.push(`魔力+${itemData.mag}`);
+                    if (itemData.def > 0) stats.push(`防御+${itemData.def}`);
+                    if (itemData.mdef > 0) stats.push(`魔防+${itemData.mdef}`);
+                    if (itemData.spd > 0) stats.push(`速度+${itemData.spd}`);
+                    if (itemData.spd < 0) stats.push(`速度${itemData.spd}`);
+
+                    itemDiv.innerHTML = `
+                        <strong style="color: #d4af37;">${itemData.name}</strong><br>
+                        <small style="color: #95a5a6;">${typeLabel[itemData.type] || itemData.type}</small><br>
+                        <small style="color: #3498db;">${stats.join(' / ')}</small>
+                    `;
+
+                    itemDiv.addEventListener('mouseenter', () => {
+                        itemDiv.style.backgroundColor = '#1a2a35';
+                        itemDiv.style.borderColor = '#e8c547';
+                    });
+                    itemDiv.addEventListener('mouseleave', () => {
+                        itemDiv.style.backgroundColor = '#0a0e11';
+                        itemDiv.style.borderColor = '#d4af37';
+                    });
+                    itemDiv.addEventListener('click', () => {
+                        equipItem(itemId);
+                    });
+                    inventoryContainer.appendChild(itemDiv);
                 }
-                inventoryContainer.appendChild(itemDiv);
             });
+        }
+
+        // ==================== Equipment Management ====================
+        function equipItem(itemId) {
+            const item = equipmentDB[itemId];
+            if (!item) return;
+
+            let slot = null;
+            if (item.type === 'weapon') slot = 'weapon';
+            else if (item.type === 'head') slot = 'head';
+            else if (item.type === 'body') slot = 'body';
+            else if (item.type === 'feet') slot = 'feet';
+            else if (item.type === 'accessory') {
+                if (gameState.player.equipment.acc1 === null) slot = 'acc1';
+                else if (gameState.player.equipment.acc2 === null) slot = 'acc2';
+                else slot = 'acc1';
+            }
+
+            if (slot) {
+                const oldEquipId = gameState.player.equipment[slot];
+                gameState.player.equipment[slot] = itemId;
+                if (oldEquipId !== null && oldEquipId !== undefined) {
+                    gameState.player.inventory.push(oldEquipId);
+                }
+                gameState.player.inventory = gameState.player.inventory.filter(id => id !== itemId);
+                updatePlayerDisplay();
+                loadInventory();
+                alert(`${item.name}を装備しました！`);
+            }
         }
 
         // ==================== Save/Load System ====================
@@ -1208,13 +1310,17 @@
             const actionButtons = document.getElementById('action-buttons');
             actionButtons.innerHTML = '';
 
-            const skills = gameState.player.skills.length > 0 ? gameState.player.skills : [0, 1, 2];
+            // Show default skills if none learned
+            const skills = gameState.player.skills.length > 0 ? gameState.player.skills : [0, 2];
 
             skills.forEach(skillId => {
                 const skill = skillDB[skillId];
                 if (skill) {
                     const button = document.createElement('button');
-                    button.textContent = `${skill.name} (MP: ${skill.mpCost})`;
+                    const canUse = gameState.player.currentMP >= skill.mpCost;
+                    button.textContent = `${skill.name}\n(MP: ${skill.mpCost})`;
+                    button.style.cssText = 'white-space: pre-wrap; min-height: 50px;';
+                    if (!canUse) button.disabled = true;
                     button.addEventListener('click', () => {
                         executePlayerAction(skillId);
                     });
@@ -1225,6 +1331,7 @@
             const defendButton = document.createElement('button');
             defendButton.textContent = '防御';
             defendButton.className = 'secondary';
+            defendButton.style.cssText = 'min-height: 50px;';
             defendButton.addEventListener('click', () => {
                 executeBattleRound('defend');
             });
@@ -1314,9 +1421,99 @@
             battleLog.scrollTop = battleLog.scrollHeight;
         }
 
-        // ==================== Test Battle (for debugging) ====================
-        function testBattle() {
-            startBattle([0, 1]);
+        // ==================== Dungeon System ====================
+        const dungeonState = {
+            floor: 0,
+            encounters: 0
+        };
+
+        function updateDungeonDisplay() {
+            document.getElementById('dungeon-hp').textContent = `${gameState.player.currentHP}/${gameState.player.maxHP}`;
+            document.getElementById('dungeon-mp').textContent = `${gameState.player.currentMP}/${gameState.player.maxMP}`;
+        }
+
+        function setupDungeonButtons() {
+            const btn1 = document.getElementById('btn-dungeon-explore');
+            const btn2 = document.getElementById('btn-dungeon-search');
+            const btn3 = document.getElementById('btn-dungeon-rest');
+            const btn4 = document.getElementById('btn-dungeon-retreat');
+
+            if (btn1) {
+                btn1.onclick = dungeonExplore;
+                btn2.onclick = dungeonSearch;
+                btn3.onclick = dungeonRest;
+                btn4.onclick = dungeonRetreat;
+            }
+        }
+
+        function dungeonExplore() {
+            dungeonState.floor++;
+            dungeonState.encounters++;
+
+            const rand = Math.random();
+            if (rand < 0.7) {
+                // Normal encounter
+                const enemyCount = Math.floor(Math.random() * 2) + 1;
+                const enemies = [];
+                for (let i = 0; i < enemyCount; i++) {
+                    enemies.push(Math.floor(Math.random() * 6));
+                }
+                startBattle(enemies);
+            } else if (rand < 0.9) {
+                // Boss encounter
+                const bosses = [3];
+                document.getElementById('dungeon-message').textContent = '⚠️ 強大な敵が現れた！';
+                startBattle(bosses);
+            } else {
+                // Treasure chest
+                document.getElementById('dungeon-message').textContent = '✨ 宝箱を発見した！';
+                const chestContent = document.getElementById('dungeon-content');
+                const rune = runeDB[Math.floor(Math.random() * runeDB.length)];
+                chestContent.innerHTML = `<p style="color: #f39c12; font-size: 1.1em;">🎁 ルーン「${rune.name}」を手に入れた！</p>`;
+                if (!gameState.player.runes) gameState.player.runes = [];
+                gameState.player.runes.push(rune.id);
+            }
+        }
+
+        function dungeonSearch() {
+            const rand = Math.random();
+            const content = document.getElementById('dungeon-content');
+
+            if (rand < 0.5) {
+                // Find gold
+                const gold = Math.floor(Math.random() * 100) + 50;
+                gameState.player.gold += gold;
+                content.innerHTML = `<p style="color: #d4af37; font-size: 1.1em;">💰 ${gold}ゴールドを見つけた！</p>`;
+            } else if (rand < 0.8) {
+                // Find rune
+                const rune = runeDB[Math.floor(Math.random() * runeDB.length)];
+                if (!gameState.player.runes) gameState.player.runes = [];
+                gameState.player.runes.push(rune.id);
+                content.innerHTML = `<p style="color: #f39c12; font-size: 1.1em;">✨ ルーン「${rune.name}」を発見した！</p>`;
+            } else {
+                // Nothing
+                content.innerHTML = `<p style="color: #95a5a6;">何も見つからなかった...</p>`;
+            }
+
+            updatePlayerDisplay();
+        }
+
+        function dungeonRest() {
+            gameState.player.currentHP = gameState.player.maxHP;
+            gameState.player.currentMP = gameState.player.maxMP;
+            gameState.player.statusConditions = [];
+            updateDungeonDisplay();
+            document.getElementById('dungeon-content').innerHTML = '<p style="color: #2ecc71; font-size: 1.1em;">💤 一休みして体力を回復した。</p>';
+            document.getElementById('dungeon-message').textContent = '暗い通路が続いている...';
+        }
+
+        function dungeonRetreat() {
+            gameState.player.currentHP = gameState.player.maxHP;
+            gameState.player.currentMP = gameState.player.maxMP;
+            dungeonState.floor = 0;
+            dungeonState.encounters = 0;
+            switchScreen('base-screen');
+            updatePlayerDisplay();
         }
 
         // ==================== Initialization ====================

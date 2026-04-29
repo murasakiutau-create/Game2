@@ -498,6 +498,7 @@
                     <button id="btn-skills">✨ スキル工房</button>
                     <button id="btn-tavern">🍺 酒場</button>
                     <button id="btn-inventory">🎒 インベントリ</button>
+                    <button id="btn-runes">💎 ルーン</button>
                     <button id="btn-save">💾 セーブ</button>
                     <button id="btn-load">📂 ロード</button>
                 </div>
@@ -600,6 +601,19 @@
                 </div>
                 <div class="scroll-content" id="inventory-items"></div>
                 <button class="secondary" onclick="closeModal('inventory-modal')" style="width: 100%; margin-top: 15px;">戻る</button>
+            </div>
+        </div>
+
+        <!-- Rune Management Modal -->
+        <div id="rune-modal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>💎 ルーン管理</h2>
+                    <button class="close-button" onclick="closeModal('rune-modal')">×</button>
+                </div>
+                <h3 style="color: #d4af37; margin-bottom: 15px;">所持ルーン</h3>
+                <div class="scroll-content" id="rune-list" style="max-height: 300px;"></div>
+                <button class="secondary" onclick="closeModal('rune-modal')" style="width: 100%; margin-top: 15px;">戻る</button>
             </div>
         </div>
 
@@ -982,6 +996,11 @@
             loadGame();
             updatePlayerDisplay();
             alert('ゲームをロードしました！');
+        });
+
+        document.getElementById('btn-runes').addEventListener('click', () => {
+            openModal('rune-modal');
+            loadRuneList();
         });
 
         // ==================== Shop System ====================
@@ -1516,7 +1535,44 @@
             updatePlayerDisplay();
         }
 
+        // ==================== Rune Management ====================
+        function loadRuneList() {
+            const runeList = document.getElementById('rune-list');
+            runeList.innerHTML = '';
+
+            if (!gameState.player.runes || gameState.player.runes.length === 0) {
+                runeList.innerHTML = '<p class="info-text">ルーンを持っていません。</p>';
+                return;
+            }
+
+            const runeMap = {};
+            gameState.player.runes.forEach(runeId => {
+                if (!runeMap[runeId]) {
+                    runeMap[runeId] = 0;
+                }
+                runeMap[runeId]++;
+            });
+
+            for (const runeId in runeMap) {
+                const rune = runeDB[parseInt(runeId)];
+                if (rune) {
+                    const runeDiv = document.createElement('div');
+                    runeDiv.style.cssText = 'padding: 12px; margin: 10px 0; background: #0a0e11; border: 1px solid #f39c12; border-radius: 4px;';
+                    runeDiv.innerHTML = `
+                        <strong style="color: #f39c12;">${rune.name}</strong> (×${runeMap[runeId]})<br>
+                        <small style="color: #95a5a6;">${rune.desc}</small><br>
+                        <small style="color: #3498db;">タイプ: ${rune.type}</small>
+                    `;
+                    runeList.appendChild(runeDiv);
+                }
+            }
+        }
+
         // ==================== Initialization ====================
+        // Initialize player runes array
+        if (!gameState.player.runes) {
+            gameState.player.runes = [];
+        }
         updatePlayerDisplay();
     </script>
 </body>

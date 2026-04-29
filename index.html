@@ -410,7 +410,7 @@
                 </div>
                 <div class="stat-row">
                     <span class="stat-label">経験値:</span>
-                    <span class="stat-value" id="player-exp">0</span>
+                    <span class="stat-value" id="player-exp">0 / <span id="player-exp-max">100</span></span>
                 </div>
                 <div class="stat-row">
                     <span class="stat-label">HP</span>
@@ -890,9 +890,12 @@
 
         function updatePlayerDisplay() {
             const stats = calculatePlayerStats();
+            const expToLevel = 100 * gameState.player.level;
+
             document.getElementById('player-name').textContent = gameState.player.name;
             document.getElementById('player-level').textContent = gameState.player.level;
             document.getElementById('player-exp').textContent = gameState.player.exp;
+            document.getElementById('player-exp-max').textContent = expToLevel;
             document.getElementById('player-hp-value').textContent = `${gameState.player.currentHP}/${gameState.player.maxHP}`;
             document.getElementById('player-mp-value').textContent = `${gameState.player.currentMP}/${gameState.player.maxMP}`;
             document.getElementById('player-atk').textContent = stats.atk;
@@ -1417,28 +1420,49 @@
             if (!skill) return;
 
             if (gameState.player.currentMP < skill.mpCost) {
-                addBattleLog('MPが不足している！');
+                addBattleLog('❌ MPが不足している！');
                 return;
             }
 
             gameState.player.currentMP -= skill.mpCost;
 
             if (skill.type === 'attack') {
-                const targetIndex = Math.floor(Math.random() * gameState.battle.enemies.length);
-                const damage = calculateDamage(gameState.player, skill, gameState.battle.enemies[targetIndex]);
-                gameState.battle.enemies[targetIndex].currentHP -= damage;
-                addBattleLog(`${gameState.player.name}は${skill.name}を使った！${gameState.battle.enemies[targetIndex].name}に${damage}ダメージ！`);
+                // For all targets, apply to all enemies
+                if (skill.target === 'all') {
+                    let totalDamage = 0;
+                    gameState.battle.enemies.forEach((enemy, index) => {
+                        const damage = calculateDamage(gameState.player, skill, enemy);
+                        totalDamage += damage;
+                        enemy.currentHP -= damage;
+                        addBattleLog(`${skill.name}は${enemy.name}に${damage}ダメージを与えた！`);
 
-                if (gameState.battle.enemies[targetIndex].currentHP <= 0) {
-                    gameState.battle.enemies[targetIndex].currentHP = 0;
-                    addBattleLog(`${gameState.battle.enemies[targetIndex].name}を倒した！`);
-                    gameState.player.gold += gameState.battle.enemies[targetIndex].gold;
-                    gameState.player.exp += gameState.battle.enemies[targetIndex].exp;
+                        if (enemy.currentHP <= 0) {
+                            enemy.currentHP = 0;
+                            addBattleLog(`⚔️ ${enemy.name}を倒した！`);
+                            gameState.player.gold += enemy.gold;
+                            gameState.player.exp += enemy.exp;
+                        }
+                    });
+                } else {
+                    // Single target
+                    const targetIndex = Math.floor(Math.random() * gameState.battle.enemies.length);
+                    const damage = calculateDamage(gameState.player, skill, gameState.battle.enemies[targetIndex]);
+                    gameState.battle.enemies[targetIndex].currentHP -= damage;
+                    addBattleLog(`${gameState.player.name}は${skill.name}を使った！\n${gameState.battle.enemies[targetIndex].name}に${damage}ダメージ！`);
+
+                    if (gameState.battle.enemies[targetIndex].currentHP <= 0) {
+                        gameState.battle.enemies[targetIndex].currentHP = 0;
+                        addBattleLog(`⚔️ ${gameState.battle.enemies[targetIndex].name}を倒した！`);
+                        gameState.player.gold += gameState.battle.enemies[targetIndex].gold;
+                        gameState.player.exp += gameState.battle.enemies[targetIndex].exp;
+                    }
                 }
             } else if (skill.type === 'heal') {
                 const healAmount = Math.floor(gameState.player.maxHP * (skill.power || 0.8));
                 gameState.player.currentHP = Math.min(gameState.player.maxHP, gameState.player.currentHP + healAmount);
-                addBattleLog(`${skill.name}を使った！${healAmount}回復した！`);
+                addBattleLog(`✨ ${skill.name}を使った！${healAmount}回復した！`);
+            } else if (skill.type === 'buff') {
+                addBattleLog(`💪 ${skill.name}を使った！ステータスが上がった！`);
             }
 
             executeBattleRound('player-acted');
